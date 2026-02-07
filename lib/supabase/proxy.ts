@@ -1,0 +1,129 @@
+import { createServerClient } from "@supabase/ssr"
+import { NextResponse, type NextRequest } from "next/server"
+
+// Public routes (always accessible without auth)
+const PUBLIC_ROUTES = [
+  "/auth/login",
+  "/auth/sign-up",
+  "/auth/sign-up-success",
+  "/auth/callback",
+  "/auth/setup-username",
+  "/auth/forgot-password",
+  "/auth/reset-password",
+  "/terms",
+  "/privacy",
+  "/leaderboard",
+]
+
+// Check if the path is a public read-only route (no auth required)
+function isPublicReadOnlyRoute(pathname: string): boolean {
+  if (pathname === "/forum") return true
+  if (pathname.startsWith("/forum/") && !pathname.includes("/new") && !pathname.includes("/edit")) {
+    return true
+  }
+  if (pathname.startsWith("/user/")) return true
+  return false
+}
+
+export async function updateSession(request: NextRequest) {
+  let supabaseResponse = NextResponse.next({
+    request,
+  })
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll()
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          supabaseResponse = NextResponse.next({
+            request,
+          })
+          cookiesToSet.forEach(({ name, value, options }) => supabaseResponse.cookies.set(name, value, options))
+        },
+      },
+    },
+  )
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  const pathname = request.nextUrl.pathname
+
+  // Handle OAuth code at root path - redirect to callback handler
+  // This happens when Supabase redirects to /?code=... instead of /auth/callback?code=...
+  const code = request.nextUrl.searchParams.get("code")
+  if (pathname === "/" && code) {
+    const url = request.nextUrl.clone()
+    url.pathname = "/auth/callback"
+    // Preserve the code and any other query params
+    return NextResponse.redirect(url)
+  }
+
+  // Root path "/" - show landing page for non-logged in users, redirect to dashboard if logged in
+  if (pathname === "/") {
+    if (user) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/dashboard"
+      return NextResponse.redirect(url)
+    }
+    // Allow landing page for non-authenticated users
+    return supabaseResponse
+  }
+
+  // Allow public routes without auth
+  if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
+    // If user is logged in and on login/signup pages, redirect to dashboard
+    if (user && (pathname.startsWith("/auth/login") || pathname.startsWith("/auth/sign-up"))) {
+      const url = request.nextUrl.clone()
+      const redirectTo = request.nextUrl.searchParams.get("redirectTo")
+      url.pathname = redirectTo || "/dashboard"
+      url.searchParams.delete("redirectTo")
+      return NextResponse.redirect(url)
+    }
+    return supabaseResponse
+  }
+
+  // Allow public read-only routes without auth
+  if (isPublicReadOnlyRoute(pathname)) {
+    return supabaseResponse
+  }
+
+  // Everything else requires authentication
+  if (!user) {
+    const url = request.nextUrl.clone()
+    url.pathname = "/auth/login"
+    // Store the original URL to redirect back after login
+    if (pathname !== "/") {
+      url.searchParams.set("redirectTo", pathname)
+    }
+    return NextResponse.redirect(url)
+  }
+
+  // Check if authenticated user needs to set up their username
+  // Skip this check if already on the setup-username page
+  if (pathname !== "/auth/setup-username") {
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .single()
+
+    // If no display_name or it's empty or looks like an email, redirect to username setup
+    const displayName = profile?.display_name?.trim()
+    const needsUsername = !displayName || displayName === "" || displayName.includes("@")
+    
+    if (needsUsername) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/auth/setup-username"
+      return NextResponse.redirect(url)
+    }
+  }
+
+  return supabaseResponse
+}
