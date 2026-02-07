@@ -280,6 +280,22 @@ export default function AdminDashboard() {
             </CardHeader>
           </Card>
         </Link>
+
+        <Link href="/admin/analytics">
+          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-3 rounded-lg bg-primary/10">
+                  <TrendingUp className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle>Advanced Analytics</CardTitle>
+                  <CardDescription className="mt-1">Detailed insights and user activity tracking</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+        </Link>
       </div>
 
       {/* Platform Health */}
