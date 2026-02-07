@@ -21,38 +21,126 @@ export default async function AnalyticsPage() {
 
   if (!profile?.is_admin) redirect('/dashboard')
 
-  // Fetch analytics data
-  const response = await fetch(
-    `${process.env.NEXT_PUBLIC_SITE_URL}/api/admin/analytics/summary`,
-    {
-      headers: {
-        cookie: (await import('next/headers')).cookies().toString(),
-      },
-      cache: 'no-store',
-    }
-  )
+  // Fetch analytics data directly
+  const [
+    { count: totalUsers },
+    { count: totalActions },
+    { data: recentActivity },
+    { data: topUsers },
+  ] = await Promise.all([
+    supabase.from('profiles').select('*', { count: 'exact', head: true }),
+    supabase.from('user_activity_log').select('*', { count: 'exact', head: true }),
+    supabase
+      .from('user_activity_log')
+      .select(`
+        id,
+        action_type,
+        created_at,
+        action_details,
+        profiles!inner(display_name, avatar_url)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(100),
+    supabase
+      .from('profiles')
+      .select('id, display_name, avatar_url, total_points, current_streak')
+      .order('total_points', { ascending: false })
+      .limit(10),
+  ])
 
-  const analytics = await response.json()
+  // Get active users counts
+  const now = new Date()
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
+  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-  // Fetch recent activity
-  const { data: recentActivity } = await supabase
-    .from('user_activity_log')
-    .select(`
-      id,
-      action_type,
-      created_at,
-      action_details,
-      profiles!inner(display_name, avatar_url)
-    `)
-    .order('created_at', { ascending: false })
-    .limit(100)
+  const [
+    { data: todayActiveData },
+    { data: weekActiveData },
+    { data: monthActiveData },
+  ] = await Promise.all([
+    supabase
+      .from('user_activity_log')
+      .select('user_id')
+      .gte('created_at', oneDayAgo),
+    supabase
+      .from('user_activity_log')
+      .select('user_id')
+      .gte('created_at', oneWeekAgo),
+    supabase
+      .from('user_activity_log')
+      .select('user_id')
+      .gte('created_at', oneMonthAgo),
+  ])
 
-  // Get top users by activity
-  const { data: topUsers } = await supabase
+  const activeToday = new Set(todayActiveData?.map(d => d.user_id)).size
+  const activeThisWeek = new Set(weekActiveData?.map(d => d.user_id)).size
+  const activeThisMonth = new Set(monthActiveData?.map(d => d.user_id)).size
+
+  // Get growth data (last 30 days)
+  const { data: dailyUsers } = await supabase
     .from('profiles')
-    .select('id, display_name, avatar_url, points, current_streak')
-    .order('points', { ascending: false })
-    .limit(10)
+    .select('created_at')
+    .gte('created_at', oneMonthAgo)
+    .order('created_at', { ascending: true })
+
+  const growthData = Array.from({ length: 30 }, (_, i) => {
+    const date = new Date(now.getTime() - (29 - i) * 24 * 60 * 60 * 1000)
+    const dateStr = date.toISOString().split('T')[0]
+    const count = dailyUsers?.filter(u => u.created_at.startsWith(dateStr)).length || 0
+    return { date: dateStr, count }
+  })
+
+  // Get hourly activity for heatmap (last 7 days)
+  const { data: hourlyActivity } = await supabase
+    .from('user_activity_log')
+    .select('created_at')
+    .gte('created_at', oneWeekAgo)
+
+  const heatmapData = Array.from({ length: 7 }, (_, day) => 
+    Array.from({ length: 24 }, (_, hour) => ({ day, hour, count: 0 }))
+  ).flat()
+
+  hourlyActivity?.forEach(activity => {
+    const date = new Date(activity.created_at)
+    const dayOfWeek = date.getDay()
+    const hour = date.getHours()
+    const index = dayOfWeek * 24 + hour
+    if (heatmapData[index]) {
+      heatmapData[index].count++
+    }
+  })
+
+  // Get feature usage
+  const { data: featureUsageData } = await supabase
+    .from('user_activity_log')
+    .select('action_type')
+
+  const featureUsageMap = new Map<string, number>()
+  featureUsageData?.forEach(item => {
+    const count = featureUsageMap.get(item.action_type) || 0
+    featureUsageMap.set(item.action_type, count + 1)
+  })
+
+  const featureUsage = Array.from(featureUsageMap.entries()).map(([name, count]) => ({
+    name: name.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+    count,
+  }))
+
+  const analytics = {
+    summary: {
+      totalUsers: totalUsers || 0,
+      totalActions: totalActions || 0,
+      activeToday,
+      activeThisWeek,
+      activeThisMonth,
+    },
+    growthData,
+    featureUsage,
+    heatmapData,
+  }
+
+
 
   const formatActionType = (type: string) => {
     return type
@@ -196,7 +284,7 @@ export default async function AnalyticsPage() {
                     <div className="flex-1">
                       <p className="font-medium text-sm">{user.display_name}</p>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span>{user.points} points</span>
+                        <span>{user.total_points} points</span>
                         <span>•</span>
                         <span>{user.current_streak} day streak</span>
                       </div>
