@@ -7,7 +7,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
-import { Upload, Loader2, CheckCircle2, XCircle } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Upload, Loader2, CheckCircle2, XCircle, Sparkles } from "lucide-react"
 import { upload } from "@vercel/blob/client"
 
 export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
@@ -15,9 +17,17 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
   const [videoUrl, setVideoUrl] = useState("")
   const [isUploading, setIsUploading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [isGeneratingTags, setIsGeneratingTags] = useState(false)
   const [error, setError] = useState("")
   const [nextNumber, setNextNumber] = useState(1)
   const [answer, setAnswer] = useState("")
+  
+  // AI-suggested tags
+  const [suggestedLawCategory, setSuggestedLawCategory] = useState("")
+  const [suggestedLawSection, setSuggestedLawSection] = useState("")
+  const [suggestedScenarioType, setSuggestedScenarioType] = useState("foul")
+  const [suggestedDifficulty, setSuggestedDifficulty] = useState("medium")
+  const [tagsGenerated, setTagsGenerated] = useState(false)
 
   useEffect(() => {
     async function getNextNumber() {
@@ -68,6 +78,41 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
     }
   }
 
+  const generateTags = async () => {
+    if (!answer.trim()) {
+      setError("Please enter an answer first")
+      return
+    }
+
+    setIsGeneratingTags(true)
+    setError("")
+
+    try {
+      const response = await fetch("/api/suggest-tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answer: answer.trim() })
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to generate tags")
+      }
+
+      const { tags } = await response.json()
+      
+      setSuggestedLawCategory(tags.lawCategory || "")
+      setSuggestedLawSection(tags.lawSection || "")
+      setSuggestedScenarioType(tags.scenarioType || "foul")
+      setSuggestedDifficulty(tags.difficulty || "medium")
+      setTagsGenerated(true)
+    } catch (err) {
+      console.error("Tag generation error:", err)
+      setError("Failed to generate tags. You can still enter them manually.")
+    } finally {
+      setIsGeneratingTags(false)
+    }
+  }
+
   const saveScenario = async () => {
     if (!videoUrl) {
       setError("Please upload a video first")
@@ -75,6 +120,10 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
     }
     if (!answer.trim()) {
       setError("Please provide the correct answer")
+      return
+    }
+    if (!tagsGenerated) {
+      setError("Please generate and review tags first")
       return
     }
 
@@ -88,8 +137,10 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
         title: `Scenario #${nextNumber}`,
         video_url: videoUrl,
         ai_answer: answer.trim(),
-        difficulty: "medium",
-        scenario_type: "foul",
+        law_category: suggestedLawCategory || null,
+        law_section: suggestedLawSection || null,
+        scenario_type: suggestedScenarioType,
+        difficulty: suggestedDifficulty,
         is_active: true,
         points_value: 10,
       })
@@ -176,7 +227,10 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
                 <Textarea
                   id="answer"
                   value={answer}
-                  onChange={(e) => setAnswer(e.target.value)}
+                  onChange={(e) => {
+                    setAnswer(e.target.value)
+                    setTagsGenerated(false) // Reset tags when answer changes
+                  }}
                   placeholder="Enter the correct answer for this scenario..."
                   rows={4}
                 />
@@ -185,24 +239,113 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
                 </p>
               </div>
 
+              {/* Generate Tags Button */}
               <Button
-                onClick={saveScenario}
-                disabled={isSaving || !answer.trim()}
+                onClick={generateTags}
+                disabled={isGeneratingTags || !answer.trim()}
+                variant="outline"
                 className="w-full"
-                size="lg"
               >
-                {isSaving ? (
+                {isGeneratingTags ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
+                    Generating Tags...
                   </>
                 ) : (
                   <>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Save Scenario #{nextNumber}
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    {tagsGenerated ? "Regenerate Tags" : "Generate Tags with AI"}
                   </>
                 )}
               </Button>
+
+              {/* Tag Review/Edit Section */}
+              {tagsGenerated && (
+                <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge className="bg-purple-500 text-white">AI Suggested</Badge>
+                    <p className="text-sm text-muted-foreground">Review and edit tags before saving</p>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="law-category">Law Category</Label>
+                      <Input
+                        id="law-category"
+                        value={suggestedLawCategory}
+                        onChange={(e) => setSuggestedLawCategory(e.target.value)}
+                        placeholder="e.g., Law 12: Fouls and Misconduct"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="law-section">Law Section</Label>
+                      <Input
+                        id="law-section"
+                        value={suggestedLawSection}
+                        onChange={(e) => setSuggestedLawSection(e.target.value)}
+                        placeholder="e.g., Direct Free Kick"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="scenario-type">Scenario Type</Label>
+                      <Select value={suggestedScenarioType} onValueChange={setSuggestedScenarioType}>
+                        <SelectTrigger id="scenario-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="foul">Foul</SelectItem>
+                          <SelectItem value="offside">Offside</SelectItem>
+                          <SelectItem value="handball">Handball</SelectItem>
+                          <SelectItem value="misconduct">Misconduct</SelectItem>
+                          <SelectItem value="advantage">Advantage</SelectItem>
+                          <SelectItem value="penalty">Penalty</SelectItem>
+                          <SelectItem value="var">VAR</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="difficulty">Difficulty</Label>
+                      <Select value={suggestedDifficulty} onValueChange={setSuggestedDifficulty}>
+                        <SelectTrigger id="difficulty">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="easy">Easy</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="hard">Hard</SelectItem>
+                          <SelectItem value="expert">Expert</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Save Button */}
+              {tagsGenerated && (
+                <Button
+                  onClick={saveScenario}
+                  disabled={isSaving}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Save Scenario #{nextNumber}
+                    </>
+                  )}
+                </Button>
+              )}
             </>
           )}
 
