@@ -37,8 +37,8 @@ const featureDetails: Record<string, {
   screenshot: string
 }> = {
   "decision-lab": {
-    title: "AI-Powered Decision Lab",
-    description: "Get instant, expert analysis of any match scenario. Our AI referee assistant knows the Laws of the Game inside and out.",
+    title: "RefZone Decision Lab",
+    description: "Get instant, expert analysis of any match scenario. Our advanced RefZone Algorithms provide intelligent referee assistance based on the Laws of the Game.",
     bullets: [
       "Ask any refereeing question and get accurate LOTG answers",
       "Receive specific Law references with your answers",
@@ -75,16 +75,16 @@ const featureDetails: Record<string, {
     bullets: [
       "Track your accuracy across all 17 Laws",
       "Identify your strengths and weaknesses",
-      "AI-generated quizzes targeting your weak spots",
+      "Algorithm-generated quizzes targeting your weak spots",
       "Personalized learning path recommendations"
     ],
     screenshot: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-sgg6JgPpUofMm9S3LWPo5k8vIwkViw.png"
   },
   "reports": {
     title: "Professional Match Reports",
-    description: "Generate professional-grade match reports with AI assistance. Perfect for documenting incidents and improving your paperwork.",
+    description: "Generate professional-grade match reports with intelligent RefZone assistance. Perfect for documenting incidents and improving your paperwork.",
     bullets: [
-      "AI-assisted report generation",
+      "Algorithm-assisted report generation",
       "Templates for send-offs, incidents, and more",
       "Save and export your reports",
       "Learn proper documentation practices"
@@ -178,13 +178,13 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-100 to-purple-100 dark:from-pink-950/50 dark:to-purple-950/50 text-purple-700 dark:text-purple-400 px-4 py-2 rounded-full text-sm font-medium mb-8">
             <Zap className="w-4 h-4" />
-            AI-Powered Referee Training
+            RefZone Algorithms - Advanced Training
           </div>
           <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight text-balance">
             Train like a<br /><span className="bg-gradient-to-r from-[#9114af] to-[#ff5eb8] bg-clip-text text-transparent">professional referee</span>
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-400 mb-10 max-w-2xl mx-auto text-pretty">
-            Master the Laws of the Game with AI-powered scenarios, quizzes, and expert analysis. Join hundreds of referees improving their skills every day.
+            Master the Laws of the Game with our advanced RefZone Algorithms that power intelligent scenarios, adaptive quizzes, and expert analysis. Join hundreds of referees improving their skills every day.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/auth/sign-up">
@@ -223,7 +223,7 @@ export default function LandingPage() {
             </div>
             <div className="text-center">
               <div className="text-4xl font-bold bg-gradient-to-r from-[#9114af] to-[#ff5eb8] bg-clip-text text-transparent mb-2">24/7</div>
-              <div className="text-gray-600 dark:text-gray-400">AI Assistant</div>
+              <div className="text-gray-600 dark:text-gray-400">Smart Analysis</div>
             </div>
           </div>
         </div>
@@ -337,9 +337,9 @@ export default function LandingPage() {
                 <div className="w-14 h-14 mx-auto mb-6 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 dark:from-pink-900/50 dark:to-purple-900/50 flex items-center justify-center">
                   <Brain className="w-7 h-7 text-purple-600 dark:text-purple-400" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">AI-Powered Learning</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Advanced Algorithm Learning</h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Get instant answers to any refereeing question with our AI assistant trained on the Laws of the Game.
+                  Get instant answers to any refereeing question with our RefZone Algorithms trained on the Laws of the Game.
                 </p>
               </CardContent>
             </Card>
