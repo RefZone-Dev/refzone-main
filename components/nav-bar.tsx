@@ -220,9 +220,6 @@ export function NavBar() {
           <div className="p-6 border-b">
             <div className="flex items-center justify-between gap-2">
               <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-                  <span className="text-xl font-bold text-primary-foreground">R</span>
-                </div>
                 <div>
                   <h1 className="text-xl font-bold">
                   <span className="bg-gradient-to-r from-[#9114af] to-[#ff5eb8] bg-clip-text text-transparent">R</span>
