@@ -23,14 +23,22 @@ const FUN_FACTS = [
 ]
 
 export function PageLoader({ message = "Loading..." }: { message?: string }) {
-  const [factIndex, setFactIndex] = useState(0)
+  const [factIndex, setFactIndex] = useState(() => Math.floor(Math.random() * FUN_FACTS.length))
 
   useEffect(() => {
+    console.log("[v0] PageLoader mounted, starting fact rotation")
     const interval = setInterval(() => {
-      setFactIndex((prev) => (prev + 1) % FUN_FACTS.length)
+      setFactIndex((prev) => {
+        const next = (prev + 1) % FUN_FACTS.length
+        console.log("[v0] Fact index changed:", prev, "->", next)
+        return next
+      })
     }, 3000)
 
-    return () => clearInterval(interval)
+    return () => {
+      console.log("[v0] PageLoader unmounting, clearing interval")
+      clearInterval(interval)
+    }
   }, [])
 
   return (
