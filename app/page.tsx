@@ -37,8 +37,8 @@ const featureDetails: Record<string, {
   screenshot: string
 }> = {
   "decision-lab": {
-    title: "RefZone Decision Lab",
-    description: "Get instant, expert analysis of any match scenario. Our advanced RefZone Algorithms provide intelligent referee assistance based on the Laws of the Game.",
+    title: "AI-Powered Decision Lab",
+    description: "Get instant, expert analysis of any match scenario. Our AI referee assistant knows the Laws of the Game inside and out.",
     bullets: [
       "Ask any refereeing question and get accurate LOTG answers",
       "Receive specific Law references with your answers",
@@ -82,9 +82,9 @@ const featureDetails: Record<string, {
   },
   "reports": {
     title: "Professional Match Reports",
-    description: "Generate professional-grade match reports with intelligent RefZone assistance. Perfect for documenting incidents and improving your paperwork.",
+    description: "Generate professional-grade match reports with AI assistance. Perfect for documenting incidents and improving your paperwork.",
     bullets: [
-      "Algorithm-assisted report generation",
+      "AI-assisted report generation",
       "Templates for send-offs, incidents, and more",
       "Save and export your reports",
       "Learn proper documentation practices"
@@ -337,9 +337,9 @@ export default function LandingPage() {
                 <div className="w-14 h-14 mx-auto mb-6 rounded-full bg-gradient-to-br from-pink-100 to-purple-100 dark:from-pink-900/50 dark:to-purple-900/50 flex items-center justify-center">
                   <Brain className="w-7 h-7 text-purple-600 dark:text-purple-400" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">Advanced Algorithm Learning</h3>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">AI-Powered Learning</h3>
                 <p className="text-gray-600 dark:text-gray-400">
-                  Get instant answers to any refereeing question with our RefZone Algorithms trained on the Laws of the Game.
+                  Get instant answers to any refereeing question with our AI assistant trained on the Laws of the Game.
                 </p>
               </CardContent>
             </Card>
