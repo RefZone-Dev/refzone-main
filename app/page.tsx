@@ -45,7 +45,7 @@ const featureDetails: Record<string, {
       "Learn through interactive scenario analysis",
       "Available 24/7 to help you improve"
     ],
-    screenshot: "/screenshots/decision-lab.png"
+    screenshot: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1000016359-SDZQmYPLWsbBsydP7hDV9fRNE1XSdy.jpg"
   },
   "quizzes": {
     title: "Test Your Knowledge",
@@ -56,7 +56,7 @@ const featureDetails: Record<string, {
       "Personalized recommendations based on your weaknesses",
       "Track your accuracy and improvement over time"
     ],
-    screenshot: "/screenshots/quizzes.png"
+    screenshot: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1000016361-UcVGTne1zSVURjOLiuzGz67Bfa7rpI.jpg"
   },
   "scenarios": {
     title: "Real Match Scenarios",
@@ -67,7 +67,7 @@ const featureDetails: Record<string, {
       "Detailed explanations for every decision",
       "Learn from mistakes in a safe environment"
     ],
-    screenshot: "/screenshots/scenarios.png"
+    screenshot: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/1000016358-FuIwVOxowajLIuLDU122mBGoHVvGnB.jpg"
   },
   "insights": {
     title: "Insights & Recommendations",
@@ -89,7 +89,7 @@ const featureDetails: Record<string, {
       "Save and export your reports",
       "Learn proper documentation practices"
     ],
-    screenshot: "/screenshots/reports.png"
+    screenshot: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Green%20and%20Brown%20Minimalist%20Studio%20Logo%20Design%20Template_20260206_160950_0000-jWDIcaGaYXjYvGkOrHZ0EOMYl8W6ZO.png"
   },
   "forum": {
     title: "Join the Community",
@@ -100,7 +100,7 @@ const featureDetails: Record<string, {
       "Get advice from experienced officials",
       "Build your professional network"
     ],
-    screenshot: "/screenshots/forum.png"
+    screenshot: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Green%20and%20Brown%20Minimalist%20Studio%20Logo%20Design%20Template_20260206_161416_0000-VHM24HDmY3nyjNTTl2QBq3FXqJPBWn.png"
   },
 }
 
