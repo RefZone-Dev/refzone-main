@@ -2,33 +2,43 @@
 
 import { put } from "@vercel/blob"
 
-export async function uploadVideoToBlob(formData: FormData) {
+interface UploadResult {
+  success: boolean
+  url?: string
+  error?: string
+}
+
+export async function uploadVideoToBlob(formData: FormData): Promise<UploadResult> {
   try {
-    const file = formData.get("video") as File
+    const file = formData.get("video") as File | null
     
     if (!file) {
-      throw new Error("No file provided")
+      return { success: false, error: "No file provided" }
     }
 
     if (!file.type.startsWith("video/")) {
-      throw new Error("File must be a video")
+      return { success: false, error: "File must be a video" }
     }
 
     if (file.size > 100 * 1024 * 1024) { // 100MB limit
-      throw new Error("Video file must be less than 100MB")
+      return { success: false, error: "Video file must be less than 100MB" }
     }
+
+    console.log("[v0] Uploading video:", file.name, file.size)
 
     const blob = await put(`scenarios/${Date.now()}-${file.name}`, file, {
       access: "public",
-      token: process.env.BLOB_READ_WRITE_TOKEN,
     })
+
+    console.log("[v0] Upload successful:", blob.url)
 
     return { success: true, url: blob.url }
   } catch (error) {
     console.error("[v0] Upload error:", error)
+    const errorMessage = error instanceof Error ? error.message : "Failed to upload video"
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : "Failed to upload video" 
+      error: errorMessage
     }
   }
 }
