@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog"
 import { Eye, EyeOff, Pencil, Plus, Trash2, ArrowLeft, Target, FileQuestion, ShoppingBag, Sparkles } from "lucide-react"
 import Link from "next/link"
+import { VideoScenarioUpload } from "./video-scenarios"
 
 interface Scenario {
   id: string
@@ -28,8 +29,12 @@ interface Scenario {
   description: string
   difficulty: string
   scenario_type: string
+  law_category: string
+  video_url: string
   correct_decision: string
   explanation: string
+  key_factors: string[]
+  common_mistakes: string[]
   is_active: boolean
   points_value: number
 }
@@ -91,16 +96,7 @@ export default function ContentManagement() {
     editing: null,
   })
 
-  // Form states
-  const [scenarioForm, setScenarioForm] = useState({
-    title: "",
-    description: "",
-    difficulty: "medium",
-    scenario_type: "foul",
-    correct_decision: "",
-    explanation: "",
-    points_value: 10,
-  })
+  // Form states - Scenarios are now video-only and created via VideoScenarioUpload component
 
   const [quizForm, setQuizForm] = useState({
     title: "",
@@ -172,54 +168,11 @@ export default function ContentManagement() {
     fetchContent()
   }, [router])
 
-  const openScenarioDialog = (scenario?: Scenario) => {
-    if (scenario) {
-      setScenarioForm({
-        title: scenario.title,
-        description: scenario.description,
-        difficulty: scenario.difficulty,
-        scenario_type: scenario.scenario_type,
-        correct_decision: scenario.correct_decision,
-        explanation: scenario.explanation,
-        points_value: scenario.points_value,
-      })
-      setScenarioDialog({ open: true, editing: scenario })
-    } else {
-      setScenarioForm({
-        title: "",
-        description: "",
-        difficulty: "medium",
-        scenario_type: "foul",
-        correct_decision: "",
-        explanation: "",
-        points_value: 10,
-      })
-      setScenarioDialog({ open: true, editing: null })
-    }
-  }
-
-  const saveScenario = async () => {
+  // Scenarios are now video-only and managed through VideoScenarioUpload component
+  const refreshScenarios = async () => {
     const supabase = createClient()
-
-    if (scenarioDialog.editing) {
-      const { error } = await supabase.from("scenarios").update(scenarioForm).eq("id", scenarioDialog.editing.id)
-
-      if (!error) {
-        setScenarios(scenarios.map((s) => (s.id === scenarioDialog.editing!.id ? { ...s, ...scenarioForm } : s)))
-      }
-    } else {
-      const { data, error } = await supabase
-        .from("scenarios")
-        .insert({ ...scenarioForm, is_active: true })
-        .select()
-        .single()
-
-      if (data && !error) {
-        setScenarios([data, ...scenarios])
-      }
-    }
-
-    setScenarioDialog({ open: false, editing: null })
+    const { data } = await supabase.from("scenarios").select("*").order("created_at", { ascending: false })
+    if (data) setScenarios(data)
   }
 
   const deleteScenario = async (id: string) => {
@@ -596,115 +549,21 @@ export default function ContentManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Scenario Dialog */}
+      {/* Scenario Dialog - Video Upload */}
       <Dialog open={scenarioDialog.open} onOpenChange={(open) => setScenarioDialog({ open, editing: null })}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{scenarioDialog.editing ? "Edit Scenario" : "Create Scenario"}</DialogTitle>
+            <DialogTitle>Upload Video Scenario</DialogTitle>
             <DialogDescription>
-              {scenarioDialog.editing
-                ? "Update the scenario details below"
-                : "Fill in the details to create a new scenario"}
+              Upload a video and let AI analyze it to create a training scenario
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="scenario-title">Title</Label>
-              <Input
-                id="scenario-title"
-                value={scenarioForm.title}
-                onChange={(e) => setScenarioForm({ ...scenarioForm, title: e.target.value })}
-                placeholder="Enter scenario title"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="scenario-description">Description</Label>
-              <Textarea
-                id="scenario-description"
-                value={scenarioForm.description}
-                onChange={(e) => setScenarioForm({ ...scenarioForm, description: e.target.value })}
-                placeholder="Describe the scenario"
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="scenario-difficulty">Difficulty</Label>
-                <Select
-                  value={scenarioForm.difficulty}
-                  onValueChange={(value) => setScenarioForm({ ...scenarioForm, difficulty: value })}
-                >
-                  <SelectTrigger id="scenario-difficulty">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="easy">Easy</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="hard">Hard</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="scenario-type">Scenario Type</Label>
-                <Select
-                  value={scenarioForm.scenario_type}
-                  onValueChange={(value) => setScenarioForm({ ...scenarioForm, scenario_type: value })}
-                >
-                  <SelectTrigger id="scenario-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="foul">Foul</SelectItem>
-                    <SelectItem value="offside">Offside</SelectItem>
-                    <SelectItem value="handball">Handball</SelectItem>
-                    <SelectItem value="misconduct">Misconduct</SelectItem>
-                    <SelectItem value="advantage">Advantage</SelectItem>
-                    <SelectItem value="var">VAR</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="scenario-correct-decision">Correct Decision</Label>
-              <Input
-                id="scenario-correct-decision"
-                value={scenarioForm.correct_decision}
-                onChange={(e) => setScenarioForm({ ...scenarioForm, correct_decision: e.target.value })}
-                placeholder="e.g., Direct free kick and yellow card"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="scenario-explanation">Explanation</Label>
-              <Textarea
-                id="scenario-explanation"
-                value={scenarioForm.explanation}
-                onChange={(e) => setScenarioForm({ ...scenarioForm, explanation: e.target.value })}
-                placeholder="Explain why this is the correct decision"
-                rows={3}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="scenario-points">Points Value</Label>
-              <Input
-                id="scenario-points"
-                type="number"
-                value={scenarioForm.points_value}
-                onChange={(e) =>
-                  setScenarioForm({ ...scenarioForm, points_value: Number.parseInt(e.target.value) || 10 })
-                }
-                placeholder="10"
-                min="1"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setScenarioDialog({ open: false, editing: null })}>
-              Cancel
-            </Button>
-            <Button onClick={saveScenario} disabled={!scenarioForm.title || !scenarioForm.description}>
-              {scenarioDialog.editing ? "Update" : "Create"}
-            </Button>
-          </DialogFooter>
+          <VideoScenarioUpload 
+            onSuccess={() => {
+              setScenarioDialog({ open: false, editing: null })
+              refreshScenarios()
+            }} 
+          />
         </DialogContent>
       </Dialog>
 
@@ -1063,9 +922,9 @@ export default function ContentManagement() {
                   <CardTitle>Scenarios</CardTitle>
                   <CardDescription>Manage training scenarios</CardDescription>
                 </div>
-                <Button onClick={() => openScenarioDialog()} className="cursor-pointer">
+                <Button onClick={() => setScenarioDialog({ open: true, editing: null })} className="cursor-pointer">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Scenario
+                  Upload Video Scenario
                 </Button>
               </div>
             </CardHeader>
@@ -1090,14 +949,6 @@ export default function ContentManagement() {
                         <p className="text-xs text-muted-foreground mt-1">{scenario.points_value} points</p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openScenarioDialog(scenario)}
-                          className="cursor-pointer"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
                         <Button
                           variant="outline"
                           size="sm"

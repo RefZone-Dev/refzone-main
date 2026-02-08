@@ -270,6 +270,20 @@ export function ScenarioPlayer({ scenario, userId }: ScenarioPlayerProps) {
           <Badge className="w-fit mt-2">{scenario.scenario_type}</Badge>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Video Player */}
+          {scenario.video_url && (
+            <div className="rounded-lg overflow-hidden border-2 border-border">
+              <video
+                src={scenario.video_url}
+                controls
+                className="w-full aspect-video bg-black"
+                preload="metadata"
+              >
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          )}
+
           <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
             <p className="text-gray-900 dark:text-gray-100 leading-relaxed">{scenario.description}</p>
           </div>
