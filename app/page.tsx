@@ -405,7 +405,7 @@ export default function LandingPage() {
             <div className="flex items-center gap-6 text-sm text-gray-600 dark:text-gray-400">
   <Link href="/terms" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Terms</Link>
   <Link href="/privacy" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Privacy</Link>
-  <a href="mailto:admin@refzone.org" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Contact</a>
+  <a href="mailto:admin@refzone.com.au" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Contact</a>
   <Link href="/auth/login" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Log in</Link>
   </div>
             <div className="text-sm text-gray-500 dark:text-gray-500">

@@ -79,7 +79,7 @@ export function NavBar() {
   }
 
   const handleCopyEmail = () => {
-    navigator.clipboard.writeText("admin@refzone.org")
+    navigator.clipboard.writeText("admin@refzone.com.au")
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
@@ -95,14 +95,14 @@ export function NavBar() {
         <div className="flex flex-col gap-4 pt-2">
           <div className="flex items-center gap-3 rounded-lg border p-4">
             <Mail className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-            <span className="flex-1 text-sm font-medium">admin@refzone.org</span>
+            <span className="flex-1 text-sm font-medium">admin@refzone.com.au</span>
             <Button variant="outline" size="sm" onClick={handleCopyEmail} className="gap-2 cursor-pointer bg-transparent">
               {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
               {copied ? "Copied" : "Copy"}
             </Button>
           </div>
           <a
-            href="mailto:admin@refzone.org"
+            href="mailto:admin@refzone.com.au"
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary text-primary-foreground px-4 py-2.5 text-sm font-medium transition-colors hover:bg-primary/90"
           >
             <Mail className="h-4 w-4" />
