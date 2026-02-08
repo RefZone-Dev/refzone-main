@@ -213,6 +213,12 @@ export default function DecisionLabPage() {
             </AlertDescription>
           </Alert>
 
+          <Alert variant="destructive" className="bg-yellow-50 dark:bg-yellow-950 border-yellow-300 dark:border-yellow-700 text-yellow-900 dark:text-yellow-100">
+            <AlertDescription className="text-sm">
+              <strong>AI Disclaimer:</strong> This AI assistant may provide incorrect interpretations or miss important context. Always verify decisions against the official Laws of the Game and consult with experienced referees or assessors when needed.
+            </AlertDescription>
+          </Alert>
+
           {/* Messages */}
           {messages.length > 0 && (
             <Card className="min-h-[400px] max-h-[600px] overflow-y-auto">
