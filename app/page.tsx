@@ -7,6 +7,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { 
   Brain, 
   BookOpen, 
@@ -22,11 +23,11 @@ import {
 } from "lucide-react"
 
 const features = [
-  { id: "decision-lab", label: "Decision Lab", icon: Brain },
+  { id: "decision-lab", label: "Decision Lab", icon: Brain, beta: true },
   { id: "quizzes", label: "Quizzes", icon: BookOpen },
   { id: "scenarios", label: "Scenarios", icon: Target },
   { id: "insights", label: "Insights", icon: TrendingUp },
-  { id: "reports", label: "Match Reports", icon: FileText },
+  { id: "reports", label: "Match Reports", icon: FileText, beta: true },
   { id: "forum", label: "Community", icon: MessageSquare },
 ]
 
@@ -75,7 +76,7 @@ const featureDetails: Record<string, {
     bullets: [
       "Track your accuracy across all 17 Laws",
       "Identify your strengths and weaknesses",
-      "AI-generated quizzes targeting your weak spots",
+      "Algorithm-generated quizzes targeting your weak spots",
       "Personalized learning path recommendations"
     ],
     screenshot: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-sgg6JgPpUofMm9S3LWPo5k8vIwkViw.png"
@@ -178,13 +179,13 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-100 to-purple-100 dark:from-pink-950/50 dark:to-purple-950/50 text-purple-700 dark:text-purple-400 px-4 py-2 rounded-full text-sm font-medium mb-8">
             <Zap className="w-4 h-4" />
-            AI-Powered Referee Training
+            RefZone Algorithms - Advanced Training
           </div>
           <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white mb-6 leading-tight text-balance">
             Train like a<br /><span className="bg-gradient-to-r from-[#9114af] to-[#ff5eb8] bg-clip-text text-transparent">professional referee</span>
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-400 mb-10 max-w-2xl mx-auto text-pretty">
-            Master the Laws of the Game with AI-powered scenarios, quizzes, and expert analysis. Join hundreds of referees improving their skills every day.
+            Master the Laws of the Game with our advanced RefZone Algorithms that power intelligent scenarios, adaptive quizzes, and expert analysis. Join hundreds of referees improving their skills every day.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/auth/sign-up">
@@ -223,7 +224,7 @@ export default function LandingPage() {
             </div>
             <div className="text-center">
               <div className="text-4xl font-bold bg-gradient-to-r from-[#9114af] to-[#ff5eb8] bg-clip-text text-transparent mb-2">24/7</div>
-              <div className="text-gray-600 dark:text-gray-400">AI Assistant</div>
+              <div className="text-gray-600 dark:text-gray-400">Smart Analysis</div>
             </div>
           </div>
         </div>
@@ -264,6 +265,9 @@ export default function LandingPage() {
                 >
                   <feature.icon className="w-4 h-4" />
                   <span className="hidden sm:inline">{feature.label}</span>
+                  {feature.beta && (
+                    <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0 h-4">BETA</Badge>
+                  )}
                 </button>
               ))}
             </div>

@@ -198,6 +198,7 @@ export default function DecisionLabPage() {
         <div className="flex items-center gap-3 mb-2">
           <FlaskConical className="h-8 w-8 text-primary" />
           <h1 className="text-3xl font-bold">DecisionLab</h1>
+          <Badge variant="secondary" className="text-xs">BETA</Badge>
         </div>
         <p className="text-muted-foreground">AI-powered scenario interpreter and LOTG expert</p>
       </div>

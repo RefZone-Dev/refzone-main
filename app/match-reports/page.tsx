@@ -90,7 +90,10 @@ export default function MatchReportsPage() {
     <div className="space-y-6 max-w-6xl">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Match Report Builder</h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-bold">Match Report Builder</h1>
+            <Badge variant="secondary" className="text-xs">BETA</Badge>
+          </div>
           <p className="text-muted-foreground">Generate and manage AI-powered match reports</p>
         </div>
       </div>
