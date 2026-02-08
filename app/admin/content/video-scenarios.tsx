@@ -67,42 +67,38 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
     setError("")
 
     try {
-      console.log("[v0] Getting upload token...")
-      const tokenResponse = await fetch("/api/upload-token")
-      const { token } = await tokenResponse.json()
-
-      if (!token) {
-        throw new Error("Failed to get upload token")
-      }
-
-      console.log("[v0] Uploading video directly to Blob storage...")
-      
       const formData = new FormData()
-      formData.append("file", videoFile)
+      formData.append("video", videoFile)
 
-      const uploadResponse = await fetch(
-        `https://blob.vercel-storage.com/upload?filename=${encodeURIComponent(videoFile.name)}`,
-        {
-          method: "POST",
-          body: formData,
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      )
+      console.log("[v0] Uploading video:", videoFile.name, videoFile.size)
+      
+      const response = await fetch("/api/upload-video", {
+        method: "POST",
+        body: formData,
+      })
 
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload failed: ${uploadResponse.statusText}`)
+      console.log("[v0] Response status:", response.status, response.statusText)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error("[v0] Upload failed:", errorText)
+        throw new Error(`Upload failed: ${response.statusText}`)
       }
 
-      const uploadResult = await uploadResponse.json()
-      console.log("[v0] Video uploaded successfully:", uploadResult.url)
+      const result = await response.json()
+      console.log("[v0] Upload result:", result)
+
+      if (!result.success || !result.url) {
+        throw new Error(result.error || "Upload failed - no URL returned")
+      }
+
+      console.log("[v0] Video uploaded successfully:", result.url)
       
-      setVideoUrl(uploadResult.url)
+      setVideoUrl(result.url)
       setIsUploading(false)
       
       // Automatically analyze after upload
-      await analyzeVideo(uploadResult.url)
+      await analyzeVideo(result.url)
     } catch (err) {
       console.error("[v0] Video upload error:", err)
       setError(err instanceof Error ? err.message : "Failed to upload video. Please try again.")
