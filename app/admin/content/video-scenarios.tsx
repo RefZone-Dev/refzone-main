@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Upload, Loader2, CheckCircle2, XCircle, Video } from "lucide-react"
-import { uploadVideoToBlob } from "./upload-video-action"
 
 interface VideoScenarioForm {
   title: string
@@ -71,12 +70,20 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
       const formData = new FormData()
       formData.append("video", videoFile)
 
-      const result = await uploadVideoToBlob(formData)
+      console.log("[v0] Uploading video to API...")
+      
+      const response = await fetch("/api/upload-video", {
+        method: "POST",
+        body: formData,
+      })
+
+      const result = await response.json()
 
       if (!result.success || !result.url) {
         throw new Error(result.error || "Upload failed")
       }
 
+      console.log("[v0] Video uploaded successfully:", result.url)
       setVideoUrl(result.url)
       setIsUploading(false)
       
