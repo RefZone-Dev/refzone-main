@@ -17,12 +17,11 @@ import { UserFeedbackButton } from "@/components/user-feedback-button"
 interface Scenario {
   id: string
   title: string
-  description: string
+  ai_description: string | null
   difficulty: string
   scenario_type: string
   video_url: string | null
-  correct_decision: string
-  explanation: string
+  ai_answer: string | null
   points_value: number
 }
 
@@ -129,8 +128,8 @@ export function ScenarioPlayer({ scenario, userId }: ScenarioPlayerProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userAnswer: userDecision,
-          correctAnswer: scenario.correct_decision,
-          questionContext: `${scenario.title}: ${scenario.description}`,
+          correctAnswer: scenario.ai_answer || "",
+          questionContext: `${scenario.title}: ${scenario.ai_description || ""}`,
         }),
       })
 
@@ -284,9 +283,11 @@ export function ScenarioPlayer({ scenario, userId }: ScenarioPlayerProps) {
             </div>
           )}
 
-          <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-            <p className="text-gray-900 dark:text-gray-100 leading-relaxed">{scenario.description}</p>
-          </div>
+          {scenario.ai_description && (
+            <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+              <p className="text-gray-900 dark:text-gray-100 leading-relaxed">{scenario.ai_description}</p>
+            </div>
+          )}
 
           {!isSubmitted ? (
             <>
@@ -341,12 +342,8 @@ export function ScenarioPlayer({ scenario, userId }: ScenarioPlayerProps) {
                       <p className="text-foreground">{userDecision}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">Correct Decision:</p>
-                      <p className="font-semibold text-foreground">{scenario.correct_decision}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">Explanation:</p>
-                      <p className="text-foreground">{scenario.explanation}</p>
+                      <p className="text-sm font-medium text-muted-foreground mb-1">Correct Answer:</p>
+                      <p className="font-semibold text-foreground">{scenario.ai_answer}</p>
                     </div>
                   </div>
                 </div>

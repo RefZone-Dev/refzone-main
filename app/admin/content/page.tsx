@@ -26,15 +26,12 @@ import { VideoScenarioUpload } from "./video-scenarios"
 interface Scenario {
   id: string
   title: string
-  description: string
+  ai_description: string | null
+  ai_answer: string | null
   difficulty: string
   scenario_type: string
-  law_category: string
-  video_url: string
-  correct_decision: string
-  explanation: string
-  key_factors: string[]
-  common_mistakes: string[]
+  law_category: string | null
+  video_url: string | null
   is_active: boolean
   points_value: number
 }
@@ -945,7 +942,7 @@ export default function ContentManagement() {
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground line-clamp-1">{scenario.description}</p>
+                        <p className="text-sm text-muted-foreground line-clamp-1">{scenario.ai_answer || "No answer set"}</p>
                         <p className="text-xs text-muted-foreground mt-1">{scenario.points_value} points</p>
                       </div>
                       <div className="flex items-center gap-2">

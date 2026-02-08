@@ -17,12 +17,11 @@ import { UserFeedbackButton } from "@/components/user-feedback-button"
 interface Scenario {
   id: string
   title: string
-  description: string
+  ai_description: string | null
   difficulty: string
   scenario_type: string
   video_url: string | null
-  correct_decision: string
-  explanation: string
+  ai_answer: string | null
   points_value: number
   law_category?: string
   law_section?: string
@@ -166,8 +165,8 @@ export function ScenarioAutoPlayer({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           userAnswer: userDecision,
-          correctAnswer: currentScenario.correct_decision,
-          questionContext: `${currentScenario.title}: ${currentScenario.description}`,
+          correctAnswer: currentScenario.ai_answer || "",
+          questionContext: `${currentScenario.title}: ${currentScenario.ai_description || ""}`,
         }),
       })
 
@@ -283,8 +282,8 @@ export function ScenarioAutoPlayer({
 
       setResult({
         isCorrect: aiResult.isCorrect,
-        correctAnswer: currentScenario.correct_decision,
-        explanation: currentScenario.explanation,
+        correctAnswer: currentScenario.ai_answer || "",
+        explanation: "",
         pointsEarned: pointsEarned,
         accuracy: aiResult.confidence,
       })
@@ -481,9 +480,11 @@ export function ScenarioAutoPlayer({
               </div>
             )}
 
-            <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-              <p className="text-gray-900 dark:text-gray-100 leading-relaxed">{currentScenario.description}</p>
-            </div>
+            {currentScenario.ai_description && (
+              <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+                <p className="text-gray-900 dark:text-gray-100 leading-relaxed">{currentScenario.ai_description}</p>
+              </div>
+            )}
 
             {!isSubmitted ? (
               <>

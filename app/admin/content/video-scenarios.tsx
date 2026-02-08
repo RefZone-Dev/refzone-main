@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { Upload, Loader2, CheckCircle2, XCircle } from "lucide-react"
 import { upload } from "@vercel/blob/client"
@@ -18,14 +17,7 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState("")
   const [nextNumber, setNextNumber] = useState(1)
-
-  const [description, setDescription] = useState("")
-  const [correctDecision, setCorrectDecision] = useState("")
-  const [explanation, setExplanation] = useState("")
-  const [difficulty, setDifficulty] = useState("medium")
-  const [scenarioType, setScenarioType] = useState("foul")
-  const [lawCategory, setLawCategory] = useState("Law 12")
-  const [pointsValue, setPointsValue] = useState(10)
+  const [answer, setAnswer] = useState("")
 
   useEffect(() => {
     async function getNextNumber() {
@@ -81,8 +73,8 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
       setError("Please upload a video first")
       return
     }
-    if (!description || !correctDecision) {
-      setError("Please fill in the description and correct decision")
+    if (!answer.trim()) {
+      setError("Please provide the correct answer")
       return
     }
 
@@ -94,17 +86,12 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
 
       const { error: insertError } = await supabase.from("scenarios").insert({
         title: `Scenario #${nextNumber}`,
-        description,
-        difficulty,
-        scenario_type: scenarioType,
-        law_category: lawCategory,
-        points_value: pointsValue,
         video_url: videoUrl,
-        correct_decision: correctDecision,
-        explanation,
-        key_factors: [],
-        common_mistakes: [],
+        ai_answer: answer.trim(),
+        difficulty: "medium",
+        scenario_type: "foul",
         is_active: true,
+        points_value: 10,
       })
 
       if (insertError) throw insertError
@@ -130,7 +117,7 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
 
           {/* Video Upload */}
           <div className="space-y-2">
-            <Label htmlFor="video-upload">Upload Video *</Label>
+            <Label htmlFor="video-upload">Upload Video</Label>
             <div className="flex gap-2">
               <Input
                 id="video-upload"
@@ -181,95 +168,26 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
             </div>
           )}
 
-          {/* Scenario Form - shown after video upload */}
+          {/* Answer field - shown after video upload */}
           {videoUrl && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="description">Description *</Label>
+                <Label htmlFor="answer">Answer</Label>
                 <Textarea
-                  id="description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Describe what happens in this scenario..."
-                  rows={3}
+                  id="answer"
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                  placeholder="Enter the correct answer for this scenario..."
+                  rows={4}
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="correct-decision">Correct Decision *</Label>
-                <Input
-                  id="correct-decision"
-                  value={correctDecision}
-                  onChange={(e) => setCorrectDecision(e.target.value)}
-                  placeholder="e.g., Direct free kick and yellow card"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="explanation">Explanation</Label>
-                <Textarea
-                  id="explanation"
-                  value={explanation}
-                  onChange={(e) => setExplanation(e.target.value)}
-                  placeholder="Explain why this is the correct decision..."
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Difficulty</Label>
-                  <Select value={difficulty} onValueChange={setDifficulty}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="easy">Easy</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="hard">Hard</SelectItem>
-                      <SelectItem value="expert">Expert</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Scenario Type</Label>
-                  <Select value={scenarioType} onValueChange={setScenarioType}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="foul">Foul</SelectItem>
-                      <SelectItem value="offside">Offside</SelectItem>
-                      <SelectItem value="handball">Handball</SelectItem>
-                      <SelectItem value="misconduct">Misconduct</SelectItem>
-                      <SelectItem value="advantage">Advantage</SelectItem>
-                      <SelectItem value="var">VAR</SelectItem>
-                      <SelectItem value="penalty">Penalty</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Law Category</Label>
-                  <Input
-                    value={lawCategory}
-                    onChange={(e) => setLawCategory(e.target.value)}
-                    placeholder="e.g., Law 12"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Points Value</Label>
-                  <Input
-                    type="number"
-                    value={pointsValue}
-                    onChange={(e) => setPointsValue(parseInt(e.target.value) || 10)}
-                    min="1"
-                  />
-                </div>
+                <p className="text-xs text-muted-foreground">
+                  AI will compare user answers against this to provide feedback.
+                </p>
               </div>
 
               <Button
                 onClick={saveScenario}
-                disabled={isSaving || !description || !correctDecision}
+                disabled={isSaving || !answer.trim()}
                 className="w-full"
                 size="lg"
               >
