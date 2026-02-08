@@ -50,9 +50,9 @@ export const metadata: Metadata = {
   category: "Education",
   classification: "Sports Education & Training",
   icons: {
-    icon: "/favicon.png",
-    apple: "/apple-icon.png",
-    shortcut: "/favicon.png",
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+    shortcut: "/icon.svg",
   },
   manifest: "/manifest.json",
   appleWebApp: {
