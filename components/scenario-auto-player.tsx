@@ -385,12 +385,8 @@ export function ScenarioAutoPlayer({
                   <Award className="h-5 w-5 text-orange-500" />
                   <span>Best Streak: {bestStreak} correct in a row</span>
                 </div>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <Button onClick={generateNewScenario} size="lg">
-                    <Zap className="h-4 w-4 mr-2" />
-                    Generate New Scenario
-                  </Button>
-                  <Button onClick={() => router.push("/dashboard")} variant="outline" size="lg">
+                <div className="flex items-center justify-center">
+                  <Button onClick={() => router.push("/dashboard")} size="lg">
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Dashboard
                   </Button>
