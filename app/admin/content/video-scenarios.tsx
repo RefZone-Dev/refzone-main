@@ -67,28 +67,42 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
     setError("")
 
     try {
-      const formData = new FormData()
-      formData.append("video", videoFile)
+      console.log("[v0] Getting upload token...")
+      const tokenResponse = await fetch("/api/upload-token")
+      const { token } = await tokenResponse.json()
 
-      console.log("[v0] Uploading video to API...")
-      
-      const response = await fetch("/api/upload-video", {
-        method: "POST",
-        body: formData,
-      })
-
-      const result = await response.json()
-
-      if (!result.success || !result.url) {
-        throw new Error(result.error || "Upload failed")
+      if (!token) {
+        throw new Error("Failed to get upload token")
       }
 
-      console.log("[v0] Video uploaded successfully:", result.url)
-      setVideoUrl(result.url)
+      console.log("[v0] Uploading video directly to Blob storage...")
+      
+      const formData = new FormData()
+      formData.append("file", videoFile)
+
+      const uploadResponse = await fetch(
+        `https://blob.vercel-storage.com/upload?filename=${encodeURIComponent(videoFile.name)}`,
+        {
+          method: "POST",
+          body: formData,
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Upload failed: ${uploadResponse.statusText}`)
+      }
+
+      const uploadResult = await uploadResponse.json()
+      console.log("[v0] Video uploaded successfully:", uploadResult.url)
+      
+      setVideoUrl(uploadResult.url)
       setIsUploading(false)
       
       // Automatically analyze after upload
-      await analyzeVideo(result.url)
+      await analyzeVideo(uploadResult.url)
     } catch (err) {
       console.error("[v0] Video upload error:", err)
       setError(err instanceof Error ? err.message : "Failed to upload video. Please try again.")
