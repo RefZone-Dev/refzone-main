@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Upload, Loader2, CheckCircle2, XCircle, Video } from "lucide-react"
+import { upload } from "@vercel/blob/client"
 
 interface VideoScenarioForm {
   title: string
@@ -67,38 +68,16 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
     setError("")
 
     try {
-      const formData = new FormData()
-      formData.append("video", videoFile)
-
-      console.log("[v0] Uploading video:", videoFile.name, videoFile.size)
-      
-      const response = await fetch("/api/upload-video", {
-        method: "POST",
-        body: formData,
+      const blob = await upload(videoFile.name, videoFile, {
+        access: "public",
+        handleUploadUrl: "/api/upload-video",
       })
 
-      console.log("[v0] Response status:", response.status, response.statusText)
-
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error("[v0] Upload failed:", errorText)
-        throw new Error(`Upload failed: ${response.statusText}`)
-      }
-
-      const result = await response.json()
-      console.log("[v0] Upload result:", result)
-
-      if (!result.success || !result.url) {
-        throw new Error(result.error || "Upload failed - no URL returned")
-      }
-
-      console.log("[v0] Video uploaded successfully:", result.url)
-      
-      setVideoUrl(result.url)
+      setVideoUrl(blob.url)
       setIsUploading(false)
       
       // Automatically analyze after upload
-      await analyzeVideo(result.url)
+      await analyzeVideo(blob.url)
     } catch (err) {
       console.error("[v0] Video upload error:", err)
       setError(err instanceof Error ? err.message : "Failed to upload video. Please try again.")
