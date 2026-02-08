@@ -7,6 +7,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { 
   Brain, 
   BookOpen, 
@@ -22,11 +23,11 @@ import {
 } from "lucide-react"
 
 const features = [
-  { id: "decision-lab", label: "Decision Lab", icon: Brain },
+  { id: "decision-lab", label: "Decision Lab", icon: Brain, beta: true },
   { id: "quizzes", label: "Quizzes", icon: BookOpen },
   { id: "scenarios", label: "Scenarios", icon: Target },
   { id: "insights", label: "Insights", icon: TrendingUp },
-  { id: "reports", label: "Match Reports", icon: FileText },
+  { id: "reports", label: "Match Reports", icon: FileText, beta: true },
   { id: "forum", label: "Community", icon: MessageSquare },
 ]
 
@@ -264,6 +265,9 @@ export default function LandingPage() {
                 >
                   <feature.icon className="w-4 h-4" />
                   <span className="hidden sm:inline">{feature.label}</span>
+                  {feature.beta && (
+                    <Badge variant="secondary" className="ml-1 text-xs px-1.5 py-0 h-4">BETA</Badge>
+                  )}
                 </button>
               ))}
             </div>
