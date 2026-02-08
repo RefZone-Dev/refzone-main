@@ -337,6 +337,12 @@ Write the report now:`
         </CardContent>
       </Card>
 
+      <Alert className="mb-6">
+        <AlertDescription className="text-sm">
+          <strong>Important:</strong> AI-generated content may contain errors or inaccuracies. Always review and edit the generated report carefully before submission to ensure it accurately reflects the incident and complies with competition requirements.
+        </AlertDescription>
+      </Alert>
+
       {/* Send-Off Form */}
       {reportType === "send-off" && (
         <Card className="mb-6">
