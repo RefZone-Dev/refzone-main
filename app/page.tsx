@@ -78,7 +78,7 @@ const featureDetails: Record<string, {
       "AI-generated quizzes targeting your weak spots",
       "Personalized learning path recommendations"
     ],
-    screenshot: "/screenshots/insights.png"
+    screenshot: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-sgg6JgPpUofMm9S3LWPo5k8vIwkViw.png"
   },
   "reports": {
     title: "Professional Match Reports",
