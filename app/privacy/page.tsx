@@ -71,7 +71,7 @@ export default function PrivacyPolicyPage() {
             <h2 className="text-xl font-semibold text-foreground mb-3">Contact Us</h2>
             <p className="text-muted-foreground leading-relaxed">
               If you have any questions about this privacy policy or your personal data, please contact us at{" "}
-              <a href="mailto:admin@refzone.org" className="text-primary hover:underline">admin@refzone.org</a>.
+              <a href="mailto:admin@refzone.com.au" className="text-primary hover:underline">admin@refzone.com.au</a>.
             </p>
           </section>
         </div>

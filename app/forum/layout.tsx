@@ -83,7 +83,7 @@ export default async function CommunityLayout({
               <Link href="/terms" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Terms</Link>
               <Link href="/privacy" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Privacy</Link>
               <Link href="/forum" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Forum</Link>
-              <a href="mailto:admin@refzone.org" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Contact</a>
+              <a href="mailto:admin@refzone.com.au" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Contact</a>
               <Link href="/auth/login" className="hover:text-purple-600 dark:hover:text-purple-400 transition-colors">Log in</Link>
             </div>
             <div className="text-sm text-gray-500 dark:text-gray-500">
