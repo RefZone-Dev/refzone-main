@@ -71,6 +71,7 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
       const blob = await upload(videoFile.name, videoFile, {
         access: "public",
         handleUploadUrl: "/api/upload-video",
+        multipart: true,
       })
 
       setVideoUrl(blob.url)
