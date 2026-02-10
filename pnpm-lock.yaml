@@ -45,7 +45,7 @@ importers:
         specifier: latest
         version: 1.4.0
       '@fal-ai/client':
-        specifier: 1.8.0
+        specifier: ^1.1.0
         version: 1.8.0
       '@hookform/resolvers':
         specifier: ^3.10.0
@@ -203,6 +203,9 @@ importers:
       react-hook-form:
         specifier: latest
         version: 7.71.1(react@19.2.0)
+      react-is:
+        specifier: latest
+        version: 19.2.4
       react-resizable-panels:
         specifier: latest
         version: 4.6.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
