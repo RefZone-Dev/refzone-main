@@ -19,7 +19,6 @@ function LoginContent() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
-  const [socialLoading, setSocialLoading] = useState(false)
   const [emailNotConfirmed, setEmailNotConfirmed] = useState(false)
   const [resendingEmail, setResendingEmail] = useState(false)
   const [resendSuccess, setResendSuccess] = useState(false)
