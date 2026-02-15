@@ -33,23 +33,10 @@ export async function GET(request: NextRequest) {
     if (data.user) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("display_name, has_set_username, date_of_birth")
+        .select("display_name, has_set_username")
         .eq("id", data.user.id)
         .single()
 
-      // Save DOB from Google sign-up flow (passed as query param)
-      const dob = requestUrl.searchParams.get("dob")
-      if (dob && !profile?.date_of_birth) {
-        await supabase
-          .from("profiles")
-          .update({
-            date_of_birth: dob,
-            privacy_agreed: true,
-            privacy_agreed_at: new Date().toISOString(),
-          })
-          .eq("id", data.user.id)
-      }
-      
       // Redirect to username setup if:
       // 1. No profile or display_name is missing
       // 2. display_name contains "@" (email-based)
