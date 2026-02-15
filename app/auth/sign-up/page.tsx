@@ -85,7 +85,7 @@ export default function SignUpPage() {
         email,
         password,
         options: {
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/dashboard`,
+          emailRedirectTo: process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${typeof window !== "undefined" ? window.location.origin : ""}/dashboard`,
           data: {
             display_name: username,
             date_of_birth: dateOfBirth,
@@ -162,10 +162,11 @@ export default function SignUpPage() {
 
     try {
       const supabase = createClient()
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "")
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?dob=${dateOfBirth}`,
+          redirectTo: `${baseUrl}/auth/callback?dob=${dateOfBirth}`,
           queryParams: {
             access_type: "offline",
             prompt: "consent",
