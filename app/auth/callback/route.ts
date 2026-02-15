@@ -8,10 +8,13 @@ export async function GET(request: NextRequest) {
   const redirectTo = requestUrl.searchParams.get("redirectTo") || "/dashboard"
   const error = requestUrl.searchParams.get("error")
   const errorDescription = requestUrl.searchParams.get("error_description")
+  
+  // Use environment variable for proper origin, fallback to request origin for local dev
+  const baseOrigin = process.env.NEXT_PUBLIC_SITE_URL || requestUrl.origin
 
   // Handle OAuth errors
   if (error) {
-    const loginUrl = new URL("/auth/login", requestUrl.origin)
+    const loginUrl = new URL("/auth/login", baseOrigin)
     loginUrl.searchParams.set("error", errorDescription || error)
     return NextResponse.redirect(loginUrl)
   }
@@ -21,7 +24,7 @@ export async function GET(request: NextRequest) {
     const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
     
     if (exchangeError) {
-      const loginUrl = new URL("/auth/login", requestUrl.origin)
+      const loginUrl = new URL("/auth/login", baseOrigin)
       loginUrl.searchParams.set("error", exchangeError.message || "Failed to complete sign in")
       return NextResponse.redirect(loginUrl)
     }
@@ -57,15 +60,15 @@ export async function GET(request: NextRequest) {
         || (isOAuthUser && !profile.has_set_username)
       
       if (needsUsername) {
-        return NextResponse.redirect(new URL("/auth/setup-username", requestUrl.origin))
+        return NextResponse.redirect(new URL("/auth/setup-username", baseOrigin))
       }
     }
     
     // Successfully authenticated - redirect to the intended destination
-    const destination = new URL(redirectTo, requestUrl.origin)
+    const destination = new URL(redirectTo, baseOrigin)
     return NextResponse.redirect(destination)
   }
 
   // No code provided - redirect to login
-  return NextResponse.redirect(new URL("/auth/login", requestUrl.origin))
+  return NextResponse.redirect(new URL("/auth/login", baseOrigin))
 }
