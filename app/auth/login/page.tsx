@@ -27,7 +27,7 @@ export default function LoginPage() {
   const redirectTo = searchParams.get("redirectTo") || "/dashboard"
 
   const getRedirectUrl = () => {
-    const baseUrl = typeof window !== "undefined" ? window.location.origin : ""
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "")
     return `${baseUrl}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`
   }
 
@@ -117,7 +117,7 @@ export default function LoginPage() {
         type: "signup",
         email,
         options: {
-          emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || window.location.origin,
+          emailRedirectTo: process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || (typeof window !== "undefined" ? window.location.origin : ""),
         },
       })
 
