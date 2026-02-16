@@ -10,8 +10,6 @@ const PUBLIC_ROUTES = [
   "/auth/setup-username",
   "/auth/forgot-password",
   "/auth/reset-password",
-  "/terms",
-  "/privacy",
   "/leaderboard",
 ]
 
@@ -65,15 +63,16 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Root path "/" - show landing page for non-logged in users, redirect to dashboard if logged in
+  // Root path "/" - redirect to login if not authenticated, dashboard if authenticated
   if (pathname === "/") {
     if (user) {
       const url = request.nextUrl.clone()
       url.pathname = "/dashboard"
       return NextResponse.redirect(url)
     }
-    // Allow landing page for non-authenticated users
-    return supabaseResponse
+    const url = request.nextUrl.clone()
+    url.pathname = "/auth/login"
+    return NextResponse.redirect(url)
   }
 
   // Allow public routes without auth
