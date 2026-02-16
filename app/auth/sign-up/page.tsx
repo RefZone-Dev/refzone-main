@@ -250,9 +250,9 @@ export default function SignUpPage() {
                     className="text-sm text-muted-foreground leading-tight cursor-pointer"
                   >
                     {"I agree to the "}
-                    <Link href="/terms" className="text-primary hover:underline" target="_blank">
+                    <a href="https://refzone.com.au/terms" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
                       Terms and Conditions
-                    </Link>
+                    </a>
                     .
                   </label>
                 </div>
@@ -270,9 +270,9 @@ export default function SignUpPage() {
                     className="text-sm text-muted-foreground leading-tight cursor-pointer"
                   >
                     {"I agree to the "}
-                    <Link href="/privacy" className="text-primary hover:underline" target="_blank">
+                    <a href="https://refzone.com.au/privacy" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">
                       Privacy Policy
-                    </Link>
+                    </a>
                     {", and confirm I am 16+ or have parental consent. I'm happy to receive updates and exclusive offers from RefZone and our industry partners."}
                   </label>
                 </div>
