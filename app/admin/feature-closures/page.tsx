@@ -16,8 +16,30 @@ import { FEATURE_NAMES, FEATURE_PATHS } from "@/lib/feature-closures-types"
 
 const FEATURE_KEYS: FeatureKey[] = ['quizzes', 'scenarios', 'forum', 'decision_lab', 'reports', 'profile']
 
+function getDefaultClosure(featureKey: FeatureKey): FeatureClosure {
+  return {
+    id: '',
+    feature_key: featureKey,
+    is_closed: false,
+    message: null,
+    recommendation_text: null,
+    recommendation_url: null,
+    recommendation_feature_key: null,
+    closed_by: null,
+    closed_at: null,
+    created_at: '',
+    updated_at: '',
+  }
+}
+
 export default function FeatureClosuresPage() {
-  const [closures, setClosures] = useState<Record<string, FeatureClosure>>({})
+  const [closures, setClosures] = useState<Record<string, FeatureClosure>>(() => {
+    const initial: Record<string, FeatureClosure> = {}
+    FEATURE_KEYS.forEach(key => {
+      initial[key] = getDefaultClosure(key)
+    })
+    return initial
+  })
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState<string | null>(null)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
@@ -37,6 +59,9 @@ export default function FeatureClosuresPage() {
       if (error) throw error
 
       const closuresMap: Record<string, FeatureClosure> = {}
+      FEATURE_KEYS.forEach(key => {
+        closuresMap[key] = getDefaultClosure(key)
+      })
       data?.forEach(closure => {
         closuresMap[closure.feature_key] = closure as FeatureClosure
       })
@@ -129,8 +154,7 @@ export default function FeatureClosuresPage() {
 
       <div className="grid gap-6">
         {FEATURE_KEYS.map(featureKey => {
-          const closure = closures[featureKey]
-          if (!closure) return null
+          const closure = closures[featureKey] || getDefaultClosure(featureKey)
 
           return (
             <Card key={featureKey}>
