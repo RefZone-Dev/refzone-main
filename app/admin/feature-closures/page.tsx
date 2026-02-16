@@ -11,8 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { PageLoader } from "@/components/ui/page-loader"
 import { AlertCircle, CheckCircle2, Save } from "lucide-react"
-import type { FeatureKey, FeatureClosure } from "@/lib/feature-closures"
-import { FEATURE_NAMES, FEATURE_PATHS } from "@/lib/feature-closures"
+import type { FeatureKey, FeatureClosure } from "@/lib/feature-closures-types"
+import { FEATURE_NAMES, FEATURE_PATHS } from "@/lib/feature-closures-types"
 
 const FEATURE_KEYS: FeatureKey[] = ['quizzes', 'scenarios', 'forum', 'decision_lab', 'reports', 'profile']
 
