@@ -7,6 +7,8 @@ import { MessageSquare, Reply, Star, Trophy, Calendar } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import { VerifiedBadge } from "@/components/verified-badge"
+import { checkFeatureClosure } from "@/lib/feature-closures"
+import { FeatureClosure } from "@/components/ui/feature-closure"
 
 export const metadata = {
   title: "RefZone",
@@ -21,6 +23,12 @@ export default async function ProfilePage() {
 
   if (!user) {
     redirect("/auth/login")
+  }
+
+  // Check if profile is closed
+  const closure = await checkFeatureClosure('profile')
+  if (closure) {
+    return <FeatureClosure closure={closure} />
   }
 
   // Fetch user profile

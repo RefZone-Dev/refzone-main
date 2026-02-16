@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server"
 import { ForumClient } from "./forum-client"
 import { isUnder16 } from "@/lib/age-utils"
 import { AgeRestrictionBanner } from "@/components/age-restriction-banner"
+import { checkFeatureClosure } from "@/lib/feature-closures"
+import { FeatureClosure } from "@/components/ui/feature-closure"
 
 export default async function CommunityPage() {
   const supabase = await createClient()
@@ -9,6 +11,12 @@ export default async function CommunityPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser()
+
+  // Check if forum is closed
+  const closure = await checkFeatureClosure('forum')
+  if (closure) {
+    return <FeatureClosure closure={closure} />
+  }
 
   // Check age restriction for logged-in users
   if (user) {
