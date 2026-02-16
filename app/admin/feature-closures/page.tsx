@@ -181,14 +181,14 @@ export default function FeatureClosuresPage() {
                     <div className="space-y-2">
                       <Label htmlFor={`${featureKey}-rec-feature`}>Recommend Another Feature</Label>
                       <Select
-                        value={closure.recommendation_feature_key || ''}
+                        value={closure.recommendation_feature_key || 'none'}
                         onValueChange={(value) => {
                           setClosures(prev => ({
                             ...prev,
                             [featureKey]: {
                               ...prev[featureKey],
-                              recommendation_feature_key: value || null,
-                              recommendation_url: null
+                              recommendation_feature_key: value === 'none' ? null : value,
+                              recommendation_url: value === 'none' ? null : prev[featureKey].recommendation_url
                             }
                           }))
                         }}
@@ -197,7 +197,7 @@ export default function FeatureClosuresPage() {
                           <SelectValue placeholder="Select a feature..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
                           {FEATURE_KEYS.filter(k => k !== featureKey).map(key => (
                             <SelectItem key={key} value={key}>
                               {FEATURE_NAMES[key]}
