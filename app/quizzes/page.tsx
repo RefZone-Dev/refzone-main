@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 import { BookOpen, Clock } from "lucide-react"
+import { checkFeatureClosure } from "@/lib/feature-closures"
+import { FeatureClosure } from "@/components/ui/feature-closure"
 
 export default async function QuizzesPage() {
   const supabase = await createClient()
@@ -14,6 +16,12 @@ export default async function QuizzesPage() {
   } = await supabase.auth.getUser()
   if (!user) {
     redirect("/auth/login")
+  }
+
+  // Check if quizzes are closed
+  const closure = await checkFeatureClosure('quizzes')
+  if (closure) {
+    return <FeatureClosure closure={closure} />
   }
 
   // Fetch all active quizzes

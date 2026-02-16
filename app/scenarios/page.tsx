@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { ScenarioAutoPlayer } from "@/components/scenario-auto-player"
+import { checkFeatureClosure } from "@/lib/feature-closures"
+import { FeatureClosure } from "@/components/ui/feature-closure"
 
 export default async function ScenariosPage() {
   const supabase = await createClient()
@@ -10,6 +12,12 @@ export default async function ScenariosPage() {
   } = await supabase.auth.getUser()
   if (!user) {
     redirect("/auth/login")
+  }
+
+  // Check if scenarios are closed
+  const closure = await checkFeatureClosure('scenarios')
+  if (closure) {
+    return <FeatureClosure closure={closure} />
   }
 
   const { data: profile } = await supabase
