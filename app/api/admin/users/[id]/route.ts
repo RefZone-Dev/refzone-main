@@ -4,7 +4,7 @@ import { createServiceClient } from '@/lib/supabase/service'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -28,7 +28,7 @@ export async function GET(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const userId = params.id
+    const { id: userId } = await params
 
     // Get user profile
     const { data: userProfile } = await serviceClient
@@ -52,7 +52,7 @@ export async function GET(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient()
@@ -76,7 +76,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const userId = params.id
+    const { id: userId } = await params
 
     // Prevent self-deletion
     if (userId === user.id) {

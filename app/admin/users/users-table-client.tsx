@@ -119,8 +119,8 @@ export function UsersTableClient({ users: initialUsers }: UsersTableClientProps)
         toast.success('User deleted successfully')
         router.refresh()
       } else {
-        const error = await res.json()
-        toast.error(error.message || 'Failed to delete user')
+        const error = await res.json().catch(() => ({ error: 'Failed to delete user' }))
+        toast.error(error.error || error.message || 'Failed to delete user')
       }
     } catch (error) {
       console.error('Failed to delete user:', error)
