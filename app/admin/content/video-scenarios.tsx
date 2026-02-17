@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Upload, Loader2, CheckCircle2, XCircle, Sparkles } from "lucide-react"
-import { upload } from "@vercel/blob/client"
+
 
 export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
   const [videoFile, setVideoFile] = useState<File | null>(null)
@@ -63,15 +63,21 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
     setError("")
 
     try {
-      // Upload directly from browser to Blob storage
-      // The API route handles admin auth check during token generation
-      const blob = await upload(videoFile.name, videoFile, {
-        access: "public",
-        handleUploadUrl: "/api/upload-video",
-        multipart: true,
+      const formData = new FormData()
+      formData.append("file", videoFile)
+
+      const response = await fetch("/api/upload-video", {
+        method: "POST",
+        body: formData,
       })
 
-      setVideoUrl(blob.url)
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Failed to upload video")
+      }
+
+      const { url } = await response.json()
+      setVideoUrl(url)
     } catch (err) {
       console.error("Video upload error:", err)
       setError(err instanceof Error ? err.message : "Failed to upload video.")
