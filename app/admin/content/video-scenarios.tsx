@@ -108,6 +108,8 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
     } catch (err) {
       console.error("Tag generation error:", err)
       setError("Failed to generate tags. You can still enter them manually.")
+      // Still show the manual entry form even if generation fails
+      setTagsGenerated(true)
     } finally {
       setIsGeneratingTags(false)
     }
@@ -120,10 +122,6 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
     }
     if (!answer.trim()) {
       setError("Please provide the correct answer")
-      return
-    }
-    if (!tagsGenerated) {
-      setError("Please generate and review tags first")
       return
     }
 
@@ -240,31 +238,62 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
               </div>
 
               {/* Generate Tags Button */}
-              <Button
-                onClick={generateTags}
-                disabled={isGeneratingTags || !answer.trim()}
-                variant="outline"
-                className="w-full"
-              >
-                {isGeneratingTags ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating Tags...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    {tagsGenerated ? "Regenerate Tags" : "Generate Tags with AI"}
-                  </>
-                )}
-              </Button>
+              {!tagsGenerated && (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={generateTags}
+                    disabled={isGeneratingTags || !answer.trim()}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    {isGeneratingTags ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Generating Tags...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Generate Tags with AI
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={() => setTagsGenerated(true)}
+                    disabled={!answer.trim()}
+                    variant="secondary"
+                  >
+                    Enter Manually
+                  </Button>
+                </div>
+              )}
 
               {/* Tag Review/Edit Section */}
               {tagsGenerated && (
                 <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge className="bg-purple-500 text-white">AI Suggested</Badge>
-                    <p className="text-sm text-muted-foreground">Review and edit tags before saving</p>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-purple-500 text-white">Tags</Badge>
+                      <p className="text-sm text-muted-foreground">Review and edit tags before saving</p>
+                    </div>
+                    <Button
+                      onClick={generateTags}
+                      disabled={isGeneratingTags}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      {isGeneratingTags ? (
+                        <>
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          Regenerating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          Regenerate
+                        </>
+                      )}
+                    </Button>
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
