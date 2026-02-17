@@ -1,6 +1,11 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
+import { createGroq } from "@ai-sdk/groq"
 import { generateText } from "ai"
+
+const groq = createGroq({
+  apiKey: process.env.GROQ_API_KEY,
+})
 
 export const maxDuration = 60
 
@@ -29,7 +34,7 @@ export async function POST(request: Request) {
     const lawsDocument = configData?.config_value || ""
 
     const { text } = await generateText({
-      model: "anthropic/claude-sonnet-4-20250514",
+      model: groq("llama-3.3-70b-versatile"),
       system: lawsDocument
         ? `You are a football referee instructor creating a focused quiz. Reference this Laws of the Game document:\n\n${lawsDocument}`
         : "You are a football referee instructor with comprehensive knowledge of IFAB Laws of the Game 2025/26.",

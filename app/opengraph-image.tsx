@@ -1,6 +1,5 @@
 import { ImageResponse } from 'next/og'
 
-export const runtime = 'edge'
 export const alt = 'RefZone - AI-Powered Football Referee Training'
 export const size = {
   width: 1200,

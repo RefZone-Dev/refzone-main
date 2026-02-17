@@ -71,8 +71,15 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
       })
 
       if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Upload failed')
+        const text = await response.text()
+        
+        // Try to parse as JSON, but handle HTML error pages
+        try {
+          const errorData = JSON.parse(text)
+          throw new Error(errorData.error || 'Upload failed')
+        } catch {
+          throw new Error(`Upload failed: ${response.status} ${response.statusText}`)
+        }
       }
 
       const data = await response.json()

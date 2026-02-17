@@ -1,6 +1,11 @@
 import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
+import { createGroq } from "@ai-sdk/groq"
 import { generateText } from "ai"
+
+const groq = createGroq({
+  apiKey: process.env.GROQ_API_KEY,
+})
 
 const VALID_SCENARIO_TYPES = ["foul", "offside", "handball", "misconduct", "advantage", "var"] as const
 type ScenarioType = (typeof VALID_SCENARIO_TYPES)[number]
@@ -93,7 +98,7 @@ export async function POST(request: Request) {
     }
 
     const { text } = await generateText({
-      model: "anthropic/claude-sonnet-4-20250514",
+      model: groq("llama-3.3-70b-versatile"),
       system: lawsDocument
         ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
         : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",

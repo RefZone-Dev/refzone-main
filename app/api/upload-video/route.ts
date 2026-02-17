@@ -73,7 +73,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       })
 
     if (uploadError) {
-      console.error('[v0] Upload error:', uploadError)
+      console.error('Upload error:', uploadError)
       return NextResponse.json(
         { error: uploadError.message },
         { status: 500 }
@@ -85,11 +85,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .from('scenario-videos')
       .getPublicUrl(data.path)
 
-    console.log('[v0] Video upload completed:', publicUrl)
-
     return NextResponse.json({ url: publicUrl })
   } catch (error) {
-    console.error('[v0] Upload handler error:', error)
+    console.error('Upload handler error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Upload failed' },
       { status: 500 }
