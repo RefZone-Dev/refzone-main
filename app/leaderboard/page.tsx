@@ -37,30 +37,18 @@ export default async function LeaderboardPage() {
   let profileRestricted = false
 
   if (user) {
-    const { data: currentProfile } = await supabase
-      .from("profiles")
-      .select("date_of_birth")
-      .eq("id", user.id)
-      .single()
-
-    profileRestricted = isUnder16(currentProfile?.date_of_birth)
-
     const userIds = leaderboard?.map((p) => p.id) || []
-    const [friendshipsResult, customizationsResult] = await Promise.all([
-      supabase
-        .from("friendships")
-        .select("*")
-        .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
-      supabase
-        .from("user_customization")
-        .select(`
-          user_id,
-          active_badge_id,
-          shop_items!user_customization_active_badge_id_fkey(name, preview_data)
-        `)
-        .in("user_id", userIds),
+    const [currentProfileResult, friendshipsResult, customizationsResult] = await Promise.all([
+      supabase.from("profiles").select("date_of_birth").eq("id", user.id).single(),
+      supabase.from("friendships").select("*").or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
+      supabase.from("user_customization").select(`
+        user_id,
+        active_badge_id,
+        shop_items!user_customization_active_badge_id_fkey(name, preview_data)
+      `).in("user_id", userIds),
     ])
 
+    profileRestricted = isUnder16(currentProfileResult.data?.date_of_birth)
     friendships = friendshipsResult.data
     customizations = customizationsResult.data
   }

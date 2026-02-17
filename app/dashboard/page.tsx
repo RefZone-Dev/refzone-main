@@ -20,6 +20,12 @@ export default async function DashboardPage() {
     redirect("/auth/login")
   }
 
+  // Check if user needs to set up their username (moved from middleware for performance)
+  const displayName = profile.display_name?.trim()
+  if (!profile.has_set_username && (!displayName || displayName === "" || displayName.includes("@"))) {
+    redirect("/auth/setup-username")
+  }
+
   const now = new Date()
   const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
     .toISOString()
