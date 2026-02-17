@@ -61,10 +61,11 @@ export function ImportantNotificationModal() {
       query = query.not("id", "in", `(${seenIds.join(",")})`)
     }
 
-    const { data: unseenNotifications } = await query.single()
+    const { data: unseenNotifications, error } = await query
 
-    if (unseenNotifications) {
-      setNotification(unseenNotifications)
+    // Check if we have data (it's an array now, not single)
+    if (unseenNotifications && unseenNotifications.length > 0) {
+      setNotification(unseenNotifications[0])
       setOpen(true)
     }
   }
