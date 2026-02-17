@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Upload, Loader2, CheckCircle2, XCircle, Sparkles } from "lucide-react"
+import { upload } from "@vercel/blob/client"
 
 export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
   const [videoFile, setVideoFile] = useState<File | null>(null)
@@ -62,37 +63,15 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
     setError("")
 
     try {
-      // First verify admin access via lightweight API check
-      const authRes = await fetch('/api/upload-video', { method: 'POST' })
-      if (!authRes.ok) {
-        const authData = await authRes.json().catch(() => ({}))
-        throw new Error(authData.error || 'Not authorized to upload')
-      }
+      // Upload directly from browser to Blob storage
+      // The API route handles admin auth check during token generation
+      const blob = await upload(videoFile.name, videoFile, {
+        access: "public",
+        handleUploadUrl: "/api/upload-video",
+        multipart: true,
+      })
 
-      // Upload directly from browser to Supabase Storage
-      const supabase = createClient()
-      const fileExt = videoFile.name.split('.').pop()
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-      const filePath = `scenarios/${fileName}`
-
-      const { data, error: uploadError } = await supabase.storage
-        .from('scenario-videos')
-        .upload(filePath, videoFile, {
-          contentType: videoFile.type,
-          cacheControl: '3600',
-          upsert: false,
-        })
-
-      if (uploadError) {
-        throw new Error(uploadError.message)
-      }
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('scenario-videos')
-        .getPublicUrl(data.path)
-
-      setVideoUrl(publicUrl)
+      setVideoUrl(blob.url)
     } catch (err) {
       console.error("Video upload error:", err)
       setError(err instanceof Error ? err.message : "Failed to upload video.")
