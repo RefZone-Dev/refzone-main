@@ -1,32 +1,56 @@
+import { handleUpload, type HandleUploadBody } from '@vercel/blob/client'
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-// Lightweight admin check endpoint - actual upload happens client-side to Supabase Storage
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  const body = (await request.json()) as HandleUploadBody
+
   try {
-    const supabase = await createClient()
+    const jsonResponse = await handleUpload({
+      body,
+      request,
+      onBeforeGenerateToken: async () => {
+        // Verify admin access
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user) {
+          throw new Error('Unauthorized')
+        }
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single()
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single()
+        if (!profile?.is_admin) {
+          throw new Error('Admin access required')
+        }
 
-    if (!profile?.is_admin) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 })
-    }
+        return {
+          allowedContentTypes: [
+            'video/mp4',
+            'video/quicktime',
+            'video/webm',
+            'video/x-msvideo',
+            'video/x-matroska',
+          ],
+          maximumSizeInBytes: 250 * 1024 * 1024, // 250MB
+          tokenPayload: JSON.stringify({ userId: user.id }),
+        }
+      },
+      onUploadCompleted: async ({ blob }) => {
+        console.log('Video upload completed:', blob.url)
+      },
+    })
 
-    return NextResponse.json({ authorized: true })
+    return NextResponse.json(jsonResponse)
   } catch (error) {
-    console.error('Auth check error:', error)
+    console.error('Upload handler error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Auth check failed' },
-      { status: 500 }
+      { error: error instanceof Error ? error.message : 'Upload failed' },
+      { status: 400 }
     )
   }
 }
