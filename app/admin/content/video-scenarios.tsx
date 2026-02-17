@@ -65,18 +65,13 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
       const formData = new FormData()
       formData.append('file', videoFile)
 
-      console.log('[v0] Uploading video:', videoFile.name)
       const response = await fetch('/api/upload-video', {
         method: 'POST',
         body: formData,
       })
 
-      console.log('[v0] Response status:', response.status)
-      console.log('[v0] Response content-type:', response.headers.get('content-type'))
-
       if (!response.ok) {
         const text = await response.text()
-        console.error('[v0] Upload failed response:', text)
         
         // Try to parse as JSON, but handle HTML error pages
         try {
@@ -88,7 +83,6 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
       }
 
       const data = await response.json()
-      console.log('[v0] Upload successful:', data.url)
       setVideoUrl(data.url)
     } catch (err) {
       console.error("Video upload error:", err)

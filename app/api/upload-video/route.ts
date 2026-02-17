@@ -3,11 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    console.log('[v0] Upload API called')
     const formData = await request.formData()
-    console.log('[v0] FormData parsed')
     const file = formData.get('file') as File
-    console.log('[v0] File extracted:', file ? file.name : 'no file')
 
     if (!file) {
       return NextResponse.json(
@@ -33,14 +30,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       )
     }
 
-    console.log('[v0] Creating Supabase client')
     const supabase = await createClient()
-    console.log('[v0] Supabase client created')
 
     // Check if user is admin
-    console.log('[v0] Getting user')
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
-    console.log('[v0] User:', user ? user.id : 'none', 'Error:', userError)
+    const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -80,7 +73,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       })
 
     if (uploadError) {
-      console.error('[v0] Upload error:', uploadError)
+      console.error('Upload error:', uploadError)
       return NextResponse.json(
         { error: uploadError.message },
         { status: 500 }
@@ -92,11 +85,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .from('scenario-videos')
       .getPublicUrl(data.path)
 
-    console.log('[v0] Video upload completed:', publicUrl)
-
     return NextResponse.json({ url: publicUrl })
   } catch (error) {
-    console.error('[v0] Upload handler error:', error)
+    console.error('Upload handler error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Upload failed' },
       { status: 500 }

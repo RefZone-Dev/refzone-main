@@ -1,34 +1,28 @@
-import { NextResponse } from "next"
-import { createServerClient } from "@supabase/ssr"
-import { cookies } from "next/headers"
+import { createServiceClient } from "@/lib/supabase/service"
+import { NextResponse } from "next/server"
+import { createGroq } from "@ai-sdk/groq"
 import { generateText } from "ai"
 
-export const runtime = "nodejs"
+const groq = createGroq({
+  apiKey: process.env.GROQ_API_KEY,
+})
+
 export const dynamic = "force-dynamic"
 
-// This endpoint will be called by Vercel Cron weekly
+// This endpoint can be called by any external cron service (e.g. Hostinger cron job, cron-job.org)
+// Example: curl -H "Authorization: Bearer YOUR_SECRET" https://app.refzone.com.au/api/cron/generate-weekly-quiz
 export async function GET(request: Request) {
-  // Verify the request is from Vercel Cron
+  // Verify the request with a shared secret
   const authHeader = request.headers.get("authorization")
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const cookieStore = await cookies()
-  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-    cookies: {
-      getAll: () => cookieStore.getAll(),
-      setAll: (cookies) => {
-        cookies.forEach(({ name, value, options }) => {
-          cookieStore.set(name, value, options)
-        })
-      },
-    },
-  })
+  const supabase = createServiceClient()
 
   try {
     const { text } = await generateText({
-      model: "openai/gpt-4o-mini",
+      model: groq("llama-3.3-70b-versatile"),
       prompt: `Generate a football/soccer refereeing quiz with 5 questions to test Laws of the Game knowledge based on the IFAB Laws of the Game 2025/26.
 
 CRITICAL: All questions, answers, and explanations MUST be based on and accurately reflect the official IFAB Laws of the Game 2025/26, including:
@@ -67,7 +61,19 @@ Requirements:
     })
 
     // Parse the AI response
-    const quizData = JSON.parse(text.trim())
+    let cleanedText = text.trim()
+    if (cleanedText.startsWith("```json")) cleanedText = cleanedText.slice(7)
+    if (cleanedText.startsWith("```")) cleanedText = cleanedText.slice(3)
+    if (cleanedText.endsWith("```")) cleanedText = cleanedText.slice(0, -3)
+    cleanedText = cleanedText.trim()
+
+    const jsonStartIndex = cleanedText.indexOf("{")
+    const jsonEndIndex = cleanedText.lastIndexOf("}")
+    if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+      cleanedText = cleanedText.substring(jsonStartIndex, jsonEndIndex + 1)
+    }
+
+    const quizData = JSON.parse(cleanedText)
 
     // Deactivate old quizzes (keep only last 4 weeks active)
     const fourWeeksAgo = new Date()
@@ -109,12 +115,9 @@ Requirements:
 
     if (questionsError) {
       console.error("Error inserting questions:", questionsError)
-      // Clean up the quiz if questions failed
       await supabase.from("quizzes").delete().eq("id", newQuiz.id)
       return NextResponse.json({ error: "Failed to insert questions" }, { status: 500 })
     }
-
-    console.log("[v0] Weekly quiz generated:", newQuiz)
 
     return NextResponse.json({
       success: true,
