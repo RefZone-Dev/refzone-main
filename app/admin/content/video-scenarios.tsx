@@ -46,8 +46,8 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
         setError("Please select a video file")
         return
       }
-      if (file.size > 100 * 1024 * 1024) {
-        setError("Video file must be less than 100MB")
+      if (file.size > 250 * 1024 * 1024) {
+        setError("Video file must be less than 250MB")
         return
       }
       setVideoFile(file)
