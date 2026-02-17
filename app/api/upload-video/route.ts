@@ -3,8 +3,11 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    console.log('[v0] Upload API called')
     const formData = await request.formData()
+    console.log('[v0] FormData parsed')
     const file = formData.get('file') as File
+    console.log('[v0] File extracted:', file ? file.name : 'no file')
 
     if (!file) {
       return NextResponse.json(
@@ -30,10 +33,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       )
     }
 
+    console.log('[v0] Creating Supabase client')
     const supabase = await createClient()
+    console.log('[v0] Supabase client created')
 
     // Check if user is admin
-    const { data: { user } } = await supabase.auth.getUser()
+    console.log('[v0] Getting user')
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    console.log('[v0] User:', user ? user.id : 'none', 'Error:', userError)
     if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
