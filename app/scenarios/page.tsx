@@ -20,18 +20,16 @@ export default async function ScenariosPage() {
     return <FeatureClosure closure={closure} />
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("scenario_streak, longest_scenario_streak")
-    .eq("id", user.id)
-    .single()
+  // Fetch all data in parallel
+  const [profileResult, scenariosResult, completedResult] = await Promise.all([
+    supabase.from("profiles").select("scenario_streak, longest_scenario_streak").eq("id", user.id).single(),
+    supabase.from("scenarios").select("*").eq("is_active", true),
+    supabase.from("scenario_responses").select("scenario_id").eq("user_id", user.id),
+  ])
 
-  const { data: scenarios } = await supabase.from("scenarios").select("*").eq("is_active", true)
-
-  const { data: completedScenarios } = await supabase
-    .from("scenario_responses")
-    .select("scenario_id")
-    .eq("user_id", user.id)
+  const profile = profileResult.data
+  const scenarios = scenariosResult.data
+  const completedScenarios = completedResult.data
 
   const completedIds = new Set(completedScenarios?.map((s) => s.scenario_id) || [])
 

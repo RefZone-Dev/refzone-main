@@ -24,11 +24,14 @@ export default async function QuizzesPage() {
     return <FeatureClosure closure={closure} />
   }
 
-  // Fetch all active quizzes
-  const { data: quizzes } = await supabase.from("quizzes").select("*").eq("is_active", true).order("difficulty")
+  // Fetch quizzes and attempts in parallel
+  const [quizzesResult, attemptsResult] = await Promise.all([
+    supabase.from("quizzes").select("*").eq("is_active", true).order("difficulty"),
+    supabase.from("quiz_attempts").select("quiz_id, percentage").eq("user_id", user.id),
+  ])
 
-  // Fetch user's quiz attempts
-  const { data: attempts } = await supabase.from("quiz_attempts").select("quiz_id, percentage").eq("user_id", user.id)
+  const quizzes = quizzesResult.data
+  const attempts = attemptsResult.data
 
   // Get best scores for each quiz
   const bestScores = new Map()

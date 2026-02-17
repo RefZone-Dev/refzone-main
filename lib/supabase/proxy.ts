@@ -104,25 +104,5 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Check if authenticated user needs to set up their username
-  // Skip this check if already on the setup-username page
-  if (pathname !== "/auth/setup-username") {
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("display_name")
-      .eq("id", user.id)
-      .single()
-
-    // If no display_name or it's empty or looks like an email, redirect to username setup
-    const displayName = profile?.display_name?.trim()
-    const needsUsername = !displayName || displayName === "" || displayName.includes("@")
-    
-    if (needsUsername) {
-      const url = request.nextUrl.clone()
-      url.pathname = "/auth/setup-username"
-      return NextResponse.redirect(url)
-    }
-  }
-
   return supabaseResponse
 }

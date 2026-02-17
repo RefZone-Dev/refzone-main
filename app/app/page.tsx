@@ -22,32 +22,19 @@ export default async function AppDashboardPage() {
   let quizCount = 0
   let accuracy = 0
   try {
-    // Fetch user profile
-    const { data: profileData } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+    // Fetch all data in parallel
+    const [profileResult, scenarioCountResult, quizCountResult, scenarioResponsesResult] = await Promise.all([
+      supabase.from("profiles").select("*").eq("id", user.id).single(),
+      supabase.from("scenario_responses").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+      supabase.from("quiz_attempts").select("*", { count: "exact", head: true }).eq("user_id", user.id),
+      supabase.from("scenario_responses").select("is_correct").eq("user_id", user.id),
+    ])
 
-    profile = profileData
+    profile = profileResult.data
+    scenarioCount = scenarioCountResult.count || 0
+    quizCount = quizCountResult.count || 0
 
-    // Fetch recent activity stats
-    const { count: scenarioCountData } = await supabase
-      .from("scenario_responses")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-
-    scenarioCount = scenarioCountData || 0
-
-    const { count: quizCountData } = await supabase
-      .from("quiz_attempts")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", user.id)
-
-    quizCount = quizCountData || 0
-
-    // Fetch accuracy
-    const { data: scenarioResponses } = await supabase
-      .from("scenario_responses")
-      .select("is_correct")
-      .eq("user_id", user.id)
-
+    const scenarioResponses = scenarioResponsesResult.data
     accuracy =
       scenarioResponses && scenarioResponses.length > 0
         ? Math.round((scenarioResponses.filter((r) => r.is_correct).length / scenarioResponses.length) * 100)
