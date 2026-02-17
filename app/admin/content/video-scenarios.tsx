@@ -62,28 +62,37 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
     setError("")
 
     try {
-      const formData = new FormData()
-      formData.append('file', videoFile)
-
-      const response = await fetch('/api/upload-video', {
-        method: 'POST',
-        body: formData,
-      })
-
-      if (!response.ok) {
-        const text = await response.text()
-        
-        // Try to parse as JSON, but handle HTML error pages
-        try {
-          const errorData = JSON.parse(text)
-          throw new Error(errorData.error || 'Upload failed')
-        } catch {
-          throw new Error(`Upload failed: ${response.status} ${response.statusText}`)
-        }
+      // First verify admin access via lightweight API check
+      const authRes = await fetch('/api/upload-video', { method: 'POST' })
+      if (!authRes.ok) {
+        const authData = await authRes.json().catch(() => ({}))
+        throw new Error(authData.error || 'Not authorized to upload')
       }
 
-      const data = await response.json()
-      setVideoUrl(data.url)
+      // Upload directly from browser to Supabase Storage
+      const supabase = createClient()
+      const fileExt = videoFile.name.split('.').pop()
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
+      const filePath = `scenarios/${fileName}`
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('scenario-videos')
+        .upload(filePath, videoFile, {
+          contentType: videoFile.type,
+          cacheControl: '3600',
+          upsert: false,
+        })
+
+      if (uploadError) {
+        throw new Error(uploadError.message)
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('scenario-videos')
+        .getPublicUrl(data.path)
+
+      setVideoUrl(publicUrl)
     } catch (err) {
       console.error("Video upload error:", err)
       setError(err instanceof Error ? err.message : "Failed to upload video.")
