@@ -1,16 +1,20 @@
-import { initDatabase, setupAuthTrigger } from "@/lib/supabase/init-db"
+"use client"
 
-// Server component that runs database initialization
-export async function DatabaseInitializer() {
-  // Only run in production/server context
-  if (typeof window === "undefined") {
-    try {
-      await initDatabase()
-      await setupAuthTrigger()
-    } catch (error) {
-      console.error("[DB Init] Failed to initialize database:", error)
-    }
-  }
-  
+import { useEffect, useRef } from "react"
+
+// Client component that ensures single initialization
+export function DatabaseInitializer() {
+  const initialized = useRef(false)
+
+  useEffect(() => {
+    if (initialized.current) return
+    initialized.current = true
+
+    // Fire-and-forget initialization - don't block rendering
+    fetch("/api/init-db", { method: "POST" }).catch(() => {
+      // Silently fail - DB init is best-effort
+    })
+  }, [])
+
   return null
 }
