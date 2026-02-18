@@ -7,8 +7,6 @@ const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,
 })
 
-export const maxDuration = 60
-
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()

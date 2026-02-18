@@ -47,8 +47,6 @@ function validateScenarioType(type: string): ScenarioType {
   return "foul"
 }
 
-export const maxDuration = 60
-
 export async function POST(request: Request) {
   try {
     const userId = request.headers.get("x-user-id")

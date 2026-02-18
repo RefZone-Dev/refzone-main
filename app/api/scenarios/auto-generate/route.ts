@@ -47,8 +47,6 @@ function validateScenarioType(type: string): ScenarioType {
   return "foul"
 }
 
-export const maxDuration = 60
-
 export async function POST() {
   try {
     // Verify user is authenticated

@@ -5,8 +5,6 @@ const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,
 })
 
-export const maxDuration = 30
-
 const SYSTEM_PROMPT = `You are an expert football referee and Laws of the Game (LOTG) instructor. Your role is to help referees analyze match scenarios based on IFAB Laws of the Game 2025/26.
 
 CRITICAL RESPONSE RULES:

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,13 +10,14 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Upload, Loader2, CheckCircle2, XCircle, Sparkles } from "lucide-react"
-import { upload } from "@vercel/blob/client"
 
+const CHUNK_SIZE = 5 * 1024 * 1024 // 5MB chunks
 
 export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [videoUrl, setVideoUrl] = useState("")
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
   const [isGeneratingTags, setIsGeneratingTags] = useState(false)
   const [error, setError] = useState("")
@@ -48,38 +49,79 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
         setError("Please select a video file")
         return
       }
-      if (file.size > 250 * 1024 * 1024) {
-        setError("Video file must be less than 250MB")
-        return
-      }
+      // No file size limit - chunked upload handles any size
       setVideoFile(file)
       setError("")
     }
   }
 
-  const uploadVideo = async () => {
+  const uploadChunk = async (
+    chunk: Blob,
+    chunkIndex: number,
+    totalChunks: number,
+    uploadId: string,
+    filename: string
+  ): Promise<{ complete: boolean; url?: string; progress: number }> => {
+    const formData = new FormData()
+    formData.append('chunk', chunk)
+    formData.append('chunkIndex', chunkIndex.toString())
+    formData.append('totalChunks', totalChunks.toString())
+    formData.append('filename', filename)
+    formData.append('uploadId', uploadId)
+
+    const response = await fetch('/api/upload-video', {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || `Chunk ${chunkIndex} upload failed`)
+    }
+
+    return response.json()
+  }
+
+  const uploadVideo = useCallback(async () => {
     if (!videoFile) return
 
     setIsUploading(true)
+    setUploadProgress(0)
     setError("")
 
     try {
-      // Upload directly from browser to Blob storage
-      // The API route only handles auth + token generation (no large body through serverless)
-      const blob = await upload(videoFile.name, videoFile, {
-        access: "public",
-        handleUploadUrl: "/api/upload-video",
-        multipart: true,
-      })
+      // Generate unique upload ID
+      const uploadId = `${Date.now()}_${Math.random().toString(36).substring(7)}`
+      const totalChunks = Math.ceil(videoFile.size / CHUNK_SIZE)
 
-      setVideoUrl(blob.url)
+      // Upload chunks sequentially
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * CHUNK_SIZE
+        const end = Math.min(start + CHUNK_SIZE, videoFile.size)
+        const chunk = videoFile.slice(start, end)
+
+        const result = await uploadChunk(
+          chunk,
+          i,
+          totalChunks,
+          uploadId,
+          videoFile.name
+        )
+
+        setUploadProgress(result.progress)
+
+        if (result.complete && result.url) {
+          setVideoUrl(result.url)
+          break
+        }
+      }
     } catch (err) {
       console.error("Video upload error:", err)
       setError(err instanceof Error ? err.message : "Failed to upload video.")
     } finally {
       setIsUploading(false)
     }
-  }
+  }, [videoFile])
 
   const generateTags = async () => {
     if (!answer.trim()) {
@@ -186,7 +228,7 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
                 {isUploading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Uploading...
+                    {uploadProgress}%
                   </>
                 ) : videoUrl ? (
                   <>
@@ -204,9 +246,24 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
             {videoFile && !videoUrl && (
               <p className="text-sm text-muted-foreground">
                 Selected: {videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(2)} MB)
+                {videoFile.size > 250 * 1024 * 1024 && (
+                  <span className="text-amber-600 ml-2">
+                    (Large file - will be uploaded in chunks)
+                  </span>
+                )}
               </p>
             )}
           </div>
+
+          {/* Progress Bar */}
+          {isUploading && (
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div 
+                className="bg-purple-600 h-2.5 rounded-full transition-all duration-300" 
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+          )}
 
           {/* Video Preview */}
           {videoUrl && (

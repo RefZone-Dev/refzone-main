@@ -6,8 +6,6 @@ const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,
 })
 
-export const maxDuration = 30
-
 export async function POST(req: Request) {
   try {
     const { userAnswer, correctAnswer, questionContext } = await req.json()
