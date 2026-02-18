@@ -122,7 +122,7 @@ export function DashboardContent({
       
 
       if (attempts) {
-        setUserQuizAttempts(attempts.map(a => a.quiz_id))
+        setUserQuizAttempts(attempts.map((a: { quiz_id: string }) => a.quiz_id))
       }
     }
 
@@ -134,8 +134,8 @@ export function DashboardContent({
   const scenariosCompleted = todayActivity?.scenarios_completed ?? 0
   const quizzesCompleted = todayActivity?.quizzes_completed ?? 0
   const scenarioProgress =
-    hasGoalSet && goals.scenarios > 0 ? Math.min(100, (scenariosCompleted / goals.scenarios) * 100) : 0
-  const quizProgress = hasGoalSet && goals.quizzes > 0 ? Math.min(100, (quizzesCompleted / goals.quizzes) * 100) : 0
+    hasGoalSet && goals.scenarios! > 0 ? Math.min(100, (scenariosCompleted / goals.scenarios!) * 100) : 0
+  const quizProgress = hasGoalSet && goals.quizzes! > 0 ? Math.min(100, (quizzesCompleted / goals.quizzes!) * 100) : 0
   const overallProgress = hasGoalSet ? (scenarioProgress + quizProgress) / 2 : 0
 
   const safeForumPosts = Array.isArray(forumPosts) ? forumPosts : []
@@ -276,9 +276,8 @@ export function DashboardContent({
   return (
     <DashboardWrapper
       hasSetGoals={profile.has_set_goals || false}
-      currentScenarioGoal={profile.daily_scenario_goal}
-      currentQuizGoal={profile.daily_quiz_goal}
-      tutorialCompleted={profile.tutorial_completed ?? false}
+      currentScenarioGoal={profile.daily_scenario_goal || 0}
+      currentQuizGoal={profile.daily_quiz_goal || 0}
     >
       <GoalSettingModal
         isOpen={showGoalModal}
@@ -650,7 +649,7 @@ export function DashboardContent({
                   <p className="text-xs text-muted-foreground">Total Quizzes</p>
                 </div>
               </div>
-              <PerformanceChart responses={recentResponses} />
+              <PerformanceChart data={recentResponses} />
             </CardContent>
           </Card>
         </div>
