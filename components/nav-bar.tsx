@@ -242,8 +242,8 @@ export function NavBar() {
             <div className="pt-3 mt-3 border-t space-y-2">
               <SupportDialog>
                 <Button
-                  variant="outline"
-                  className="w-full justify-start gap-3 cursor-pointer bg-transparent"
+                  variant="ghost"
+                  className="w-full justify-start gap-3 cursor-pointer"
                 >
                   <HelpCircle className="h-5 w-5" />
                   Support
@@ -251,8 +251,8 @@ export function NavBar() {
               </SupportDialog>
               {mounted && (
                 <Button
-                  variant="outline"
-                  className="w-full justify-start gap-3 cursor-pointer bg-transparent"
+                  variant="ghost"
+                  className="w-full justify-start gap-3 cursor-pointer"
                   onClick={toggleTheme}
                 >
                   {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
@@ -260,8 +260,8 @@ export function NavBar() {
                 </Button>
               )}
               <Button
-                variant="outline"
-                className="w-full justify-start gap-3 cursor-pointer bg-transparent"
+                variant="ghost"
+                className="w-full justify-start gap-3 cursor-pointer"
                 onClick={handleSignOut}
                 disabled={isLoading}
               >
