@@ -66,7 +66,7 @@ export function GlobalTutorialWrapper({ children }: GlobalTutorialWrapperProps) 
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event) => {
+    } = supabase.auth.onAuthStateChange((event: string) => {
       if (event === "SIGNED_IN") {
         fetchTutorialState()
       } else if (event === "SIGNED_OUT") {
@@ -82,19 +82,15 @@ export function GlobalTutorialWrapper({ children }: GlobalTutorialWrapperProps) 
     }
   }, [])
 
-  // Don't wrap with tutorial if not logged in or still loading
-  if (isLoading || !tutorialData) {
-    return <>{children}</>
-  }
-
   return (
     <TutorialContextProvider
-      userId={tutorialData.userId}
-      initialStep={tutorialData.tutorialStep}
-      tutorialCompleted={tutorialData.tutorialCompleted}
+      userId={tutorialData?.userId ?? ""}
+      initialStep={tutorialData?.tutorialStep ?? 0}
+      tutorialCompleted={tutorialData?.tutorialCompleted ?? true}
+      isReady={!isLoading && tutorialData !== null}
     >
       {children}
-      <InteractiveTutorialOverlay />
+      {tutorialData && !tutorialData.tutorialCompleted && <InteractiveTutorialOverlay />}
     </TutorialContextProvider>
   )
 }

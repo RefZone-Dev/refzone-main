@@ -43,17 +43,27 @@ interface TutorialProviderProps {
   userId: string
   initialStep: number
   tutorialCompleted: boolean
+  isReady?: boolean
 }
 
-export function TutorialContextProvider({ children, userId, initialStep, tutorialCompleted }: TutorialProviderProps) {
+export function TutorialContextProvider({ children, userId, initialStep, tutorialCompleted, isReady = true }: TutorialProviderProps) {
   const [stepNumber, setStepNumber] = useState(initialStep)
-  const [isActive, setIsActive] = useState(!tutorialCompleted && initialStep > 0)
+  const [isActive, setIsActive] = useState(!tutorialCompleted && initialStep > 0 && isReady)
   const [dashboardReady, setDashboardReady] = useState(false)
   // Guard flag: once tutorial is finished (skipped or completed), never re-activate in this session
   const finishedRef = useRef(tutorialCompleted)
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+
+  // Reset active state when isReady changes
+  useEffect(() => {
+    if (!isReady) {
+      setIsActive(false)
+    } else if (!finishedRef.current && !tutorialCompleted && initialStep > 0) {
+      setIsActive(true)
+    }
+  }, [isReady, tutorialCompleted, initialStep])
 
   useEffect(() => {
     const handleDashboardReady = () => {
@@ -86,7 +96,7 @@ export function TutorialContextProvider({ children, userId, initialStep, tutoria
     }
   }, [tutorialCompleted, initialStep, pathname, dashboardReady, isActive])
 
-  const currentStep = getStepByNumber(stepNumber)
+  const currentStep = getStepByNumber(stepNumber) ?? null
   const totalSteps = getTotalSteps()
 
   const updateStepInDatabase = async (step: number) => {
