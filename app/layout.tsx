@@ -9,6 +9,7 @@ import { ImportantNotificationModal } from "@/components/important-notification-
 import { GlobalTutorialWrapper } from "@/components/tutorial/global-tutorial-wrapper"
 import { PhoneNumberPrompt } from "@/components/phone-number-prompt"
 import { StructuredData } from "@/components/structured-data"
+import { DatabaseInitializer } from "@/components/database-initializer"
 
 import { Geist } from 'next/font/google'
 
@@ -98,7 +99,7 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
@@ -109,6 +110,7 @@ export default function RootLayout({
         <StructuredData />
       </head>
       <body className={`font-sans antialiased ${geistSans.className}`}>
+        <DatabaseInitializer />
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <CustomizationProvider>
             <GlobalTutorialWrapper>{children}</GlobalTutorialWrapper>
