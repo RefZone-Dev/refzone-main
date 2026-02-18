@@ -19,6 +19,8 @@ export function GlobalTutorialWrapper({ children }: GlobalTutorialWrapperProps) 
   const [isLoading, setIsLoading] = useState(true)
   // Once we know the tutorial is completed, never re-check
   const completedRef = useRef(false)
+  // Guard to prevent multiple fetch calls
+  const fetchingRef = useRef(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -26,11 +28,15 @@ export function GlobalTutorialWrapper({ children }: GlobalTutorialWrapperProps) 
     const fetchTutorialState = async () => {
       // If already marked completed locally, skip re-fetching
       if (completedRef.current) return
+      // Prevent multiple simultaneous fetches
+      if (fetchingRef.current) return
+      fetchingRef.current = true
 
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session?.user) {
         setIsLoading(false)
+        fetchingRef.current = false
         return
       }
 
@@ -51,6 +57,7 @@ export function GlobalTutorialWrapper({ children }: GlobalTutorialWrapperProps) 
         })
       }
       setIsLoading(false)
+      fetchingRef.current = false
     }
 
     fetchTutorialState()
