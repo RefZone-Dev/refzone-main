@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS profiles (
   avatar_url TEXT,
   is_admin BOOLEAN DEFAULT false,
   has_set_username BOOLEAN DEFAULT false,
+  date_of_birth DATE,
+  privacy_agreed BOOLEAN DEFAULT false,
+  privacy_agreed_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
