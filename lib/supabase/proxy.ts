@@ -11,6 +11,8 @@ const PUBLIC_ROUTES = [
   "/auth/forgot-password",
   "/auth/reset-password",
   "/leaderboard",
+  "/api/stats",
+  "/api/git-push",
 ]
 
 // Check if the path is a public read-only route (no auth required)
@@ -106,3 +108,4 @@ export async function updateSession(request: NextRequest) {
 
   return supabaseResponse
 }
+

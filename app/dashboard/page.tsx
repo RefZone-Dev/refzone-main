@@ -22,7 +22,10 @@ export default async function DashboardPage() {
 
   // Check if user needs to set up their username (moved from middleware for performance)
   const displayName = profile.display_name?.trim()
-  if (!profile.has_set_username && (!displayName || displayName === "" || displayName.includes("@"))) {
+  const needsUsername =
+    !profile.has_set_username && (!displayName || displayName === "" || displayName.includes("@"))
+
+  if (needsUsername) {
     redirect("/auth/setup-username")
   }
 
@@ -131,3 +134,4 @@ export default async function DashboardPage() {
     />
   )
 }
+

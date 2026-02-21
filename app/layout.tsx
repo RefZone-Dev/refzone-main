@@ -10,6 +10,7 @@ import { GlobalTutorialWrapper } from "@/components/tutorial/global-tutorial-wra
 import { PhoneNumberPrompt } from "@/components/phone-number-prompt"
 import { StructuredData } from "@/components/structured-data"
 import { DatabaseInitializer } from "@/components/database-initializer"
+import DevToolbar from "@/components/DevToolbar"
 
 import { Geist } from 'next/font/google'
 
@@ -118,6 +119,9 @@ export default function RootLayout({
             <PhoneNumberPrompt />
           </CustomizationProvider>
         </ThemeProvider>
+
+        {/* Placing the Toolbar at the end of the body to avoid hydration errors */}
+        <DevToolbar />
       </body>
     </html>
   )

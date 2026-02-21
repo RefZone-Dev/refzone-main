@@ -40,8 +40,10 @@ export default function SetupUsernamePage() {
         .single()
 
       // If user already explicitly set a username, redirect to dashboard
-      if (profile?.has_set_username) {
-        router.push("/dashboard")
+      const displayName = profile?.display_name?.trim()
+      const hasValidUsername = profile?.has_set_username && displayName && !displayName.includes("@")
+      if (hasValidUsername) {
+        router.replace("/dashboard")
         return
       }
 
@@ -105,8 +107,11 @@ export default function SetupUsernamePage() {
 
       if (updateError) throw updateError
 
-      // Redirect to dashboard (tutorial will start there)
-      router.push("/dashboard")
+
+
+
+      router.replace("/dashboard")
+      router.replace("/dashboard")
     } catch (err) {
       console.error("Error setting username:", err)
       setError("Failed to set username. Please try again.")
@@ -216,4 +221,3 @@ export default function SetupUsernamePage() {
       </div>
     </div>
   )
-}
