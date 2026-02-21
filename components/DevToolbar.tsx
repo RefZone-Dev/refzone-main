@@ -12,11 +12,11 @@ export default function DevToolbar() {
     if (!window.location.hostname.includes('preview.dev')) return;
     setIsVisible(true);
 
-    // 2. Live AEST Clock
+    // 2. Live Sydney Time (Handles Daylight Savings)
     const timer = setInterval(() => {
       setLastUpdated(new Date().toLocaleTimeString('en-AU', { 
         hour12: false, 
-        timeZone: 'Australia/Brisbane' 
+        timeZone: 'Australia/Sydney' 
       }));
     }, 1000);
 
