@@ -109,16 +109,53 @@ export default function SignUpPage() {
         return
       }
 
-      // Update profile with DOB and privacy consent
+      // Create or update profile with DOB and privacy consent
       if (data.user) {
-        await supabase
+        // First check if profile exists
+        const { data: existingProfile } = await supabase
           .from("profiles")
-          .update({
-            date_of_birth: dateOfBirth,
-            privacy_agreed: true,
-            privacy_agreed_at: new Date().toISOString(),
-          })
+          .select("id")
           .eq("id", data.user.id)
+          .maybeSingle()
+
+        if (existingProfile) {
+          // Update existing profile
+          const { error: updateError } = await supabase
+            .from("profiles")
+            .update({
+              display_name: username,
+              date_of_birth: dateOfBirth,
+              privacy_agreed: true,
+              privacy_agreed_at: new Date().toISOString(),
+            })
+            .eq("id", data.user.id)
+          
+          if (updateError) {
+            console.log("[v0] Profile update error:", updateError)
+            setError("Database error saving new user")
+            setIsLoading(false)
+            return
+          }
+        } else {
+          // Create new profile
+          const { error: insertError } = await supabase
+            .from("profiles")
+            .insert({
+              id: data.user.id,
+              email: data.user.email,
+              display_name: username,
+              date_of_birth: dateOfBirth,
+              privacy_agreed: true,
+              privacy_agreed_at: new Date().toISOString(),
+            })
+          
+          if (insertError) {
+            console.log("[v0] Profile insert error:", insertError)
+            setError("Database error saving new user")
+            setIsLoading(false)
+            return
+          }
+        }
       }
 
       if (data.user && !data.user.confirmed_at) {

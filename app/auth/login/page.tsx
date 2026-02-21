@@ -68,7 +68,12 @@ function LoginContent() {
         return
       }
 
-      router.push(redirectTo)
+      // Refresh router to update auth state, then redirect
+      router.refresh()
+      // Use a small delay to ensure session is updated before redirect
+      setTimeout(() => {
+        window.location.href = redirectTo
+      }, 100)
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "An error occurred"
       setError(errorMessage)
