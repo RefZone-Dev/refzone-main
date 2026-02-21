@@ -14,10 +14,29 @@ export default async function DashboardPage() {
   }
 
   // Fetch profile first (needed for redirect check)
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  const { data: profile, error: profileError } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
-  if (!profile) {
-    redirect("/auth/login")
+  // If profile doesn't exist (e.g., database not set up), show a setup message
+  // Don't redirect to login as that creates an infinite loop with the proxy
+  if (!profile || profileError) {
+    return (
+      <div className="flex min-h-screen items-center justify-center p-6">
+        <div className="w-full max-w-md text-center space-y-4">
+          <h1 className="text-2xl font-bold">Database Setup Required</h1>
+          <p className="text-muted-foreground">
+            Your profile could not be loaded. Please run the database setup script first.
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Run the SQL script located at <code className="bg-muted px-2 py-1 rounded">/scripts/setup-database.sql</code> in your Supabase SQL Editor.
+          </p>
+          <form action="/api/auth/signout" method="post">
+            <button type="submit" className="text-sm text-primary hover:underline">
+              Sign out
+            </button>
+          </form>
+        </div>
+      </div>
+    )
   }
 
   // Check if user needs to set up their username (moved from middleware for performance)
