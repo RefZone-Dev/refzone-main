@@ -13,8 +13,15 @@ export async function POST(request: Request) {
     }
 
     const userId = user.id
-    const body = await request.json()
-    const { quantity = 1, category = "" } = body
+    let quantity = 1
+    let category = ""
+    try {
+      const body = await request.json()
+      quantity = body.quantity || 1
+      category = body.category || ""
+    } catch {
+      // No body provided (e.g. from config page), use defaults
+    }
 
     const supabase = createServiceClient()
 

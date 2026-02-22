@@ -100,8 +100,8 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
         .eq("user_id", user.id)
         .maybeSingle()
 
-      // If table doesn't exist, silently skip customization
-      if (customError && customError.code === 'PGRST116') {
+      // If table doesn't exist or any query error, silently skip customization
+      if (customError) {
         setLoading(false)
         return
       }
