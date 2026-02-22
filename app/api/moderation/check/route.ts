@@ -2,10 +2,6 @@ import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import Groq from "groq-sdk"
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-})
-
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
@@ -22,6 +18,11 @@ export async function POST(request: Request) {
     if (!title || !content) {
       return NextResponse.json({ error: "Title and content are required" }, { status: 400 })
     }
+
+    // Initialize Groq client at request time
+    const groq = new Groq({
+      apiKey: process.env.GROQ_API_KEY,
+    })
 
     // Use Groq to analyze content for appropriateness
     const completion = await groq.chat.completions.create({
