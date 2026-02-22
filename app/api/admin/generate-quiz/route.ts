@@ -73,16 +73,21 @@ export async function POST(request: Request) {
     const categoryFilter = category ? `Focus on ${category}.` : "Cover various law categories."
     const quantityNote = quantity > 1 ? `Generate ${quantity} unique quizzes.` : ""
 
+    console.log("[v0] Generating quiz with DeepSeek, quantity:", quantity, "category:", category)
+
     const { text } = await generateText({
       model: deepseek("deepseek-chat"),
       system: lawsDocument
         ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
         : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",
+      maxTokens: 4000,
+      temperature: 0.7,
       prompt: `${quizPrompt}${existingQuizzesRef}
 
 ${quantityNote} ${categoryFilter}
 
-IMPORTANT: Return ONLY valid JSON in this exact format:
+CRITICAL: You must return ONLY valid, complete JSON. Do not include any text before or after the JSON object.
+Return in this EXACT format:
 ${quantity > 1 ? `{
   "quizzes": [
     {
@@ -122,8 +127,13 @@ ${quantity > 1 ? `{
 }`}`,
     })
 
+    console.log("[v0] Raw AI response length:", text.length)
+    console.log("[v0] First 200 chars:", text.substring(0, 200))
+    console.log("[v0] Last 200 chars:", text.substring(Math.max(0, text.length - 200)))
+
     let cleanedText = text.trim()
 
+    // Remove markdown code blocks
     if (cleanedText.startsWith("```json")) {
       cleanedText = cleanedText.slice(7)
     }
@@ -135,19 +145,34 @@ ${quantity > 1 ? `{
     }
     cleanedText = cleanedText.trim()
 
+    // Extract JSON object
     const jsonStartIndex = cleanedText.indexOf("{")
     const jsonEndIndex = cleanedText.lastIndexOf("}")
 
-    if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonStartIndex < jsonEndIndex) {
-      cleanedText = cleanedText.substring(jsonStartIndex, jsonEndIndex + 1)
+    if (jsonStartIndex === -1 || jsonEndIndex === -1 || jsonStartIndex >= jsonEndIndex) {
+      console.error("[v0] No valid JSON object found in response")
+      console.error("[v0] Full response:", text)
+      return NextResponse.json(
+        {
+          error: "Generation failed",
+          details: "AI did not return a valid JSON object. Please try again.",
+        },
+        { status: 500 },
+      )
     }
+
+    cleanedText = cleanedText.substring(jsonStartIndex, jsonEndIndex + 1)
+
+    console.log("[v0] Extracted JSON length:", cleanedText.length)
+    console.log("[v0] JSON to parse:", cleanedText.substring(0, 300))
 
     let quizData
     try {
       quizData = JSON.parse(cleanedText)
+      console.log("[v0] Successfully parsed JSON")
     } catch (parseError) {
       console.error("[v0] JSON parse error:", parseError)
-      console.error("[v0] Cleaned text:", cleanedText.substring(0, 500))
+      console.error("[v0] Full cleaned text:", cleanedText)
       return NextResponse.json(
         {
           error: "Generation failed",
