@@ -6,7 +6,7 @@ import { generateText } from "ai"
 
 const deepseek = createOpenAI({
   apiKey: "sk-29fe8c9737fc4dde86e97d1621d24586",
-  baseURL: "https://api.deepseek.com",
+  baseURL: "https://api.deepseek.com/v1",
 })
 
 const VALID_SCENARIO_TYPES = ["foul", "offside", "handball", "misconduct", "advantage", "var"] as const

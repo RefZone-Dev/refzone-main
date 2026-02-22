@@ -1,10 +1,11 @@
 import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
-import { createGroq } from "@ai-sdk/groq"
+import { createOpenAI } from "@ai-sdk/openai"
 import { generateText } from "ai"
 
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY,
+const deepseek = createOpenAI({
+  apiKey: "sk-29fe8c9737fc4dde86e97d1621d24586",
+  baseURL: "https://api.deepseek.com/v1",
 })
 
 export const dynamic = "force-dynamic"
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
 
   try {
     const { text } = await generateText({
-      model: groq("llama-3.3-70b-versatile"),
+      model: deepseek("deepseek-chat"),
       prompt: `Generate a football/soccer refereeing quiz with 5 questions to test Laws of the Game knowledge based on the IFAB Laws of the Game 2025/26.
 
 CRITICAL: All questions, answers, and explanations MUST be based on and accurately reflect the official IFAB Laws of the Game 2025/26, including:

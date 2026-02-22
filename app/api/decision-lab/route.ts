@@ -1,9 +1,9 @@
 import { createOpenAI } from "@ai-sdk/openai"
-import { streamText } from "ai"
+import { generateText } from "ai"
 
 const deepseek = createOpenAI({
   apiKey: "sk-29fe8c9737fc4dde86e97d1621d24586",
-  baseURL: "https://api.deepseek.com",
+  baseURL: "https://api.deepseek.com/v1",
 })
 
 const SYSTEM_PROMPT = `You are an expert football referee and Laws of the Game (LOTG) instructor. Your role is to help referees analyze match scenarios based on IFAB Laws of the Game 2025/26.
@@ -47,18 +47,18 @@ export async function POST(req: Request) {
       })),
     ]
 
-    const result = streamText({
+    const { text } = await generateText({
       model: deepseek("deepseek-chat"),
       messages: conversationMessages,
-      maxOutputTokens: 500,
+      maxTokens: 500,
     })
 
-    let fullText = ""
-    for await (const chunk of result.textStream) {
-      fullText += chunk
+    if (!text || text.trim().length === 0) {
+      console.error("[v0] DecisionLab returned empty response")
+      return Response.json({ error: "AI returned an empty response. Please try again." }, { status: 500 })
     }
 
-    return Response.json({ response: fullText })
+    return Response.json({ response: text })
   } catch (error) {
     console.error("[v0] Error in DecisionLab:", error)
     return Response.json({ error: "Failed to analyze scenario" }, { status: 500 })

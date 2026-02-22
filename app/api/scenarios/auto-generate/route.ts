@@ -1,11 +1,12 @@
 import { createServiceClient } from "@/lib/supabase/service"
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
-import { createGroq } from "@ai-sdk/groq"
+import { createOpenAI } from "@ai-sdk/openai"
 import { generateText } from "ai"
 
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY,
+const deepseek = createOpenAI({
+  apiKey: "sk-29fe8c9737fc4dde86e97d1621d24586",
+  baseURL: "https://api.deepseek.com/v1",
 })
 
 const VALID_SCENARIO_TYPES = ["foul", "offside", "handball", "misconduct", "advantage", "var"] as const
@@ -93,7 +94,7 @@ export async function POST() {
 
     // Generate scenario using AI
     const { text } = await generateText({
-      model: groq("llama-3.3-70b-versatile"),
+      model: deepseek("deepseek-chat"),
       system: lawsDocument
         ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
         : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",

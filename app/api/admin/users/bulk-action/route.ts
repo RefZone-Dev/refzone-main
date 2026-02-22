@@ -7,13 +7,12 @@ export async function POST(request: Request) {
     const supabase = await createClient()
     const supabaseService = createServiceClient()
     
-    // Check if user is admin
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: profile } = await supabase
+    const { data: profile } = await supabaseService
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
@@ -23,87 +22,64 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const { action, userIds, data: actionData } = await request.json()
+    const { action, userIds } = await request.json()
+
+    if (!action || !userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return NextResponse.json({ message: 'Invalid request' }, { status: 400 })
+    }
 
     switch (action) {
-      case 'send_notification':
-        // Send notification to selected users
-        const notifications = userIds.map((userId: string) => ({
-          user_id: userId,
-          title: actionData.title,
-          message: actionData.message,
-          type: actionData.type || 'info',
-          is_important: actionData.isImportant || false,
-        }))
-
-        const { error: notifError } = await supabase
-          .from('notifications')
-          .insert(notifications)
-
-        if (notifError) throw notifError
-        break
-
       case 'reset_password':
-        // Send password reset emails
-        const resetPromises = userIds.map(async (userId: string) => {
-          const { data: userProfile } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', userId)
-            .single()
-
-          if (userProfile) {
-            // Get user email from auth
+        for (const userId of userIds) {
+          try {
             const { data: authUser } = await supabaseService.auth.admin.getUserById(userId)
-            if (authUser.user?.email) {
-              await supabaseService.auth.resetPasswordForEmail(authUser.user.email, {
-                redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/reset-password`,
+            if (authUser?.user?.email) {
+              await supabase.auth.resetPasswordForEmail(authUser.user.email, {
+                redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.refzone.com.au'}/auth/reset-password`,
               })
             }
+          } catch (err) {
+            console.error(`Failed to reset password for ${userId}:`, err)
           }
-        })
-
-        await Promise.all(resetPromises)
+        }
         break
 
-      case 'update_experience':
-        // Update experience level for selected users
-        const { error: expError } = await supabase
+      case 'grant_admin':
+        await supabaseService
           .from('profiles')
-          .update({ experience_level: actionData.experienceLevel })
+          .update({ is_admin: true })
           .in('id', userIds)
-
-        if (expError) throw expError
         break
 
-      case 'toggle_admin':
-        // Toggle admin status
-        const { error: adminError } = await supabase
-          .from('profiles')
-          .update({ is_admin: actionData.isAdmin })
-          .in('id', userIds)
-
-        if (adminError) throw adminError
+      case 'revoke_admin':
+        const filteredIds = userIds.filter((id: string) => id !== user.id)
+        if (filteredIds.length > 0) {
+          await supabaseService
+            .from('profiles')
+            .update({ is_admin: false })
+            .in('id', filteredIds)
+        }
         break
 
-      case 'delete_users':
-        // Delete users (will cascade due to foreign keys)
-        const deletePromises = userIds.map(async (userId: string) => {
-          await supabaseService.auth.admin.deleteUser(userId)
-        })
-
-        await Promise.all(deletePromises)
+      case 'delete':
+        for (const userId of userIds) {
+          if (userId === user.id) continue
+          await supabaseService.from('profiles').delete().eq('id', userId)
+          try {
+            await supabaseService.auth.admin.deleteUser(userId)
+          } catch {}
+        }
         break
 
       case 'export':
-        // This will be handled client-side with the data
-        break
+        const { data: exportData } = await supabaseService
+          .from('profiles')
+          .select('*')
+          .in('id', userIds)
+        return NextResponse.json({ success: true, data: exportData })
 
       default:
-        return NextResponse.json(
-          { error: 'Invalid action' },
-          { status: 400 }
-        )
+        return NextResponse.json({ message: 'Unknown action' }, { status: 400 })
     }
 
     return NextResponse.json({ 
@@ -111,9 +87,9 @@ export async function POST(request: Request) {
       message: `Successfully performed ${action} on ${userIds.length} user(s)`,
     })
   } catch (error) {
-    console.error('[v0] Bulk action error:', error)
+    console.error('Bulk action error:', error)
     return NextResponse.json(
-      { error: 'Failed to perform bulk action' },
+      { message: 'Failed to perform bulk action' },
       { status: 500 }
     )
   }

@@ -1,6 +1,12 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
-import Groq from "groq-sdk"
+import { createOpenAI } from "@ai-sdk/openai"
+import { generateText } from "ai"
+
+const deepseek = createOpenAI({
+  apiKey: "sk-29fe8c9737fc4dde86e97d1621d24586",
+  baseURL: "https://api.deepseek.com/v1",
+})
 
 export async function POST(request: Request) {
   try {
@@ -19,18 +25,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Title and content are required" }, { status: 400 })
     }
 
-    // Initialize Groq client at request time
-    const groq = new Groq({
-      apiKey: process.env.GROQ_API_KEY,
-    })
-
-    // Use Groq to analyze content for appropriateness
-    const completion = await groq.chat.completions.create({
-      model: "llama-3.1-8b-instant",
-      messages: [
-        {
-          role: "system",
-          content: `You are a content moderation assistant for a referee training community forum. 
+    const { text: responseText } = await generateText({
+      model: deepseek("deepseek-chat"),
+      system: `You are a content moderation assistant for a referee training community forum. 
 Your job is to analyze forum posts and determine if they are appropriate.
 
 Posts should be flagged as inappropriate if they contain:
@@ -53,21 +50,10 @@ Respond with ONLY a JSON object in this exact format:
 {"appropriate": true/false, "reason": "brief explanation if flagged"}
 
 Be lenient - only flag clearly inappropriate content. Normal discussions, even heated debates about calls, are fine.`,
-        },
-        {
-          role: "user",
-          content: `Please analyze this forum post:
-
-Title: ${title}
-
-Content: ${content}`,
-        },
-      ],
+      prompt: `Please analyze this forum post:\n\nTitle: ${title}\n\nContent: ${content}`,
       temperature: 0.1,
-      max_tokens: 150,
+      maxTokens: 150,
     })
-
-    const responseText = completion.choices[0]?.message?.content || '{"appropriate": true}'
 
     // Parse the AI response
     let result: { appropriate: boolean; reason?: string }
