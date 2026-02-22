@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     const { text } = await generateText({
       model: "openai/gpt-4o-mini",
       messages: conversationMessages,
-      maxTokens: 500,
+      maxOutputTokens: 500,
     })
 
     console.log("[v0] Generated text length:", text?.length || 0)
