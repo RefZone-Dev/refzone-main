@@ -200,10 +200,21 @@ ${quantity > 1 ? `{
     // Handle both single quiz and multiple quizzes format
     const quizzesToProcess = quizData.quizzes ? quizData.quizzes : [quizData]
     
+    console.log("[v0] Number of quizzes to process:", quizzesToProcess.length)
+    console.log("[v0] First quiz structure:", JSON.stringify(quizzesToProcess[0], null, 2))
+    
     const createdQuizzes = []
     let totalQuestions = 0
 
     for (const quiz of quizzesToProcess) {
+      console.log("[v0] Processing quiz:", quiz.title)
+      console.log("[v0] Quiz has questions:", quiz.questions?.length || 0)
+      
+      if (!quiz.questions || quiz.questions.length === 0) {
+        console.error("[v0] Quiz has no questions, skipping:", quiz.title)
+        continue
+      }
+      
       console.log("[v0] Inserting quiz:", quiz.title)
       const { data: newQuiz, error: quizError } = await supabase
         .from("quizzes")
@@ -220,7 +231,8 @@ ${quantity > 1 ? `{
       console.log("[v0] Quiz insert result:", { success: !quizError, quizId: newQuiz?.id, error: quizError })
 
       if (quizError) {
-        console.error("Failed to insert quiz:", quizError)
+        console.error("[v0] Failed to insert quiz:", quizError)
+        console.error("[v0] Quiz data was:", { title: quiz.title, description: quiz.description, difficulty: quiz.difficulty })
         continue
       }
 
@@ -237,17 +249,24 @@ ${quantity > 1 ? `{
         law_section: q.law_section || null,
       }))
 
+      console.log("[v0] Inserting", questionsToInsert.length, "questions for quiz", newQuiz.id)
+      console.log("[v0] First question sample:", JSON.stringify(questionsToInsert[0], null, 2))
+
       const { error: questionsError } = await supabase.from("quiz_questions").insert(questionsToInsert)
 
       if (questionsError) {
-        console.error("Failed to insert questions:", questionsError)
+        console.error("[v0] Failed to insert questions:", questionsError)
+        console.error("[v0] Questions data sample:", questionsToInsert[0])
         await supabase.from("quizzes").delete().eq("id", newQuiz.id)
         continue
       }
 
+      console.log("[v0] Successfully created quiz with", questionsToInsert.length, "questions")
       createdQuizzes.push(newQuiz)
       totalQuestions += questionsToInsert.length
     }
+
+    console.log("[v0] Final result: Created", createdQuizzes.length, "quizzes with", totalQuestions, "total questions")
 
     return NextResponse.json({ 
       success: true, 
