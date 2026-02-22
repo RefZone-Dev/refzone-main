@@ -68,7 +68,9 @@ export default function AdminConfigPage() {
       const { data } = await supabase.from("admin_config").select("*").order("config_key")
 
       if (data) {
-        const sortedConfigs = data.sort((a, b) => {
+        // Filter out daily_scenario_prompt
+        const filteredData = data.filter(c => c.config_key !== "daily_scenario_prompt")
+        const sortedConfigs = filteredData.sort((a, b) => {
           if (a.config_key === "laws_of_the_game_document") return 1
           if (b.config_key === "laws_of_the_game_document") return -1
           return a.config_key.localeCompare(b.config_key)
@@ -234,17 +236,32 @@ export default function AdminConfigPage() {
         message={modal.message}
       />
 
-      <div className="flex items-center gap-4">
-        <Button variant="outline" asChild className="cursor-pointer bg-transparent">
-          <Link href="/admin">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Admin
-          </Link>
-        </Button>
-        <div className="flex items-center gap-3">
-          <Shield className="h-6 w-6 text-primary" />
-          <h1 className="text-3xl font-bold">AI Configuration</h1>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <Button variant="outline" asChild className="cursor-pointer bg-transparent">
+            <Link href="/admin">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Admin
+            </Link>
+          </Button>
+          <div className="flex items-center gap-3">
+            <Shield className="h-6 w-6 text-primary" />
+            <h1 className="text-3xl font-bold">AI Configuration</h1>
+          </div>
         </div>
+        <Button onClick={handleSave} disabled={isSaving} size="lg" className="cursor-pointer">
+          {isSaving ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Save className="h-4 w-4 mr-2" />
+              Save All Changes
+            </>
+          )}
+        </Button>
       </div>
 
       {isLoading ? (
@@ -386,22 +403,6 @@ export default function AdminConfigPage() {
               </CardContent>
             </Card>
           ))}
-
-          <div className="flex justify-end">
-            <Button onClick={handleSave} disabled={isSaving} size="lg" className="cursor-pointer">
-              {isSaving ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Save All Changes
-                </>
-              )}
-            </Button>
-          </div>
         </>
       )}
     </div>

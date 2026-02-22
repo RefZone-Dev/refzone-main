@@ -1,11 +1,12 @@
 import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
-import { createGroq } from "@ai-sdk/groq"
+import { createOpenAI } from "@ai-sdk/openai"
 import { generateText } from "ai"
 
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY,
+const deepseek = createOpenAI({
+  apiKey: "sk-29fe8c9737fc4dde86e97d1621d24586",
+  baseURL: "https://api.deepseek.com",
 })
 
 export async function POST(request: Request) {
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
     const quantityNote = quantity > 1 ? `Generate ${quantity} unique quizzes.` : ""
 
     const { text } = await generateText({
-      model: groq("llama-3.3-70b-versatile"),
+      model: deepseek("deepseek-chat"),
       system: lawsDocument
         ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
         : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",
@@ -141,7 +142,20 @@ ${quantity > 1 ? `{
       cleanedText = cleanedText.substring(jsonStartIndex, jsonEndIndex + 1)
     }
 
-    const quizData = JSON.parse(cleanedText)
+    let quizData
+    try {
+      quizData = JSON.parse(cleanedText)
+    } catch (parseError) {
+      console.error("[v0] JSON parse error:", parseError)
+      console.error("[v0] Cleaned text:", cleanedText.substring(0, 500))
+      return NextResponse.json(
+        {
+          error: "Generation failed",
+          details: "AI response was not valid JSON. Please try again.",
+        },
+        { status: 500 },
+      )
+    }
     
     // Handle both single quiz and multiple quizzes format
     const quizzesToProcess = quizData.quizzes ? quizData.quizzes : [quizData]

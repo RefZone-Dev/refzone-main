@@ -1,8 +1,9 @@
-import { createGroq } from "@ai-sdk/groq"
+import { createOpenAI } from "@ai-sdk/openai"
 import { streamText } from "ai"
 
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY,
+const deepseek = createOpenAI({
+  apiKey: "sk-29fe8c9737fc4dde86e97d1621d24586",
+  baseURL: "https://api.deepseek.com",
 })
 
 const SYSTEM_PROMPT = `You are an expert football referee and Laws of the Game (LOTG) instructor. Your role is to help referees analyze match scenarios based on IFAB Laws of the Game 2025/26.
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
     ]
 
     const result = streamText({
-      model: groq("llama-3.3-70b-versatile"),
+      model: deepseek("deepseek-chat"),
       messages: conversationMessages,
       maxOutputTokens: 500,
     })
