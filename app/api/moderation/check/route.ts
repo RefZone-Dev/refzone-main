@@ -46,7 +46,7 @@ Respond with ONLY a JSON object in this exact format:
 Be lenient - only flag clearly inappropriate content. Normal discussions, even heated debates about calls, are fine.`,
       prompt: `Please analyze this forum post:\n\nTitle: ${title}\n\nContent: ${content}`,
       temperature: 0.1,
-      maxTokens: 150,
+      maxOutputTokens: 150,
     })
 
     // Parse the AI response

@@ -7,7 +7,7 @@ export async function POST(req: Request) {
     const { text } = await generateText({
       model: "openai/gpt-4o-mini",
       prompt,
-      maxTokens: 500,
+      maxOutputTokens: 500,
     })
 
     return Response.json({ report: text })
