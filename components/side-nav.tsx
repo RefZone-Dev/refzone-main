@@ -19,12 +19,10 @@ const navItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/scenarios", icon: PlayCircle, label: "Scenarios", tutorialId: "scenarios-nav" },
   { href: "/quizzes", icon: FileQuestion, label: "Quizzes", tutorialId: "quizzes-nav" },
-  { href: "/match-reports", icon: FileText, label: "Match Reports", tutorialId: "match-reports-nav" },
   { href: "/decision-lab", icon: FlaskConical, label: "DecisionLab", tutorialId: "decision-lab-nav" },
 ]
 
 const socialItems = [
-  { href: "/forum", icon: MessageSquare, label: "Forum" },
   { href: "/profile", icon: User, label: "Your Page" },
   { href: "/leaderboard", icon: Trophy, label: "Leaderboard", tutorialId: "leaderboard-link" },
 ]

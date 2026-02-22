@@ -75,7 +75,7 @@ export function MobileBottomNav() {
   }
 
   const isActive = (href: string) => pathname === href
-  const isSocialActive = ["/forum", "/profile", "/leaderboard"].includes(pathname)
+  const isSocialActive = ["/profile", "/leaderboard"].includes(pathname)
   const isAccountActive = ["/settings", "/admin"].includes(pathname)
 
   const GradientUnderline = ({ active }: { active: boolean }) => (
@@ -112,9 +112,6 @@ export function MobileBottomNav() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="center" className="w-48">
-              <DropdownMenuItem asChild>
-                <Link href="/forum">Forum</Link>
-              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/profile">Your Page</Link>
               </DropdownMenuItem>
