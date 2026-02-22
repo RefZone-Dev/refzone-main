@@ -1,13 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service"
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
-import { createOpenAI } from "@ai-sdk/openai"
 import { generateText } from "ai"
-
-const deepseek = createOpenAI({
-  apiKey: "sk-29fe8c9737fc4dde86e97d1621d24586",
-  baseURL: "https://api.deepseek.com/v1",
-})
 
 const VALID_SCENARIO_TYPES = ["foul", "offside", "handball", "misconduct", "advantage", "var"] as const
 type ScenarioType = (typeof VALID_SCENARIO_TYPES)[number]
@@ -94,7 +88,7 @@ export async function POST() {
 
     // Generate scenario using AI
     const { text } = await generateText({
-      model: deepseek("deepseek-chat"),
+      model: "openai/gpt-4o-mini",
       system: lawsDocument
         ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
         : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",

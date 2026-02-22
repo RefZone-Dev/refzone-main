@@ -1,18 +1,12 @@
-import { createOpenAI } from "@ai-sdk/openai"
 import { generateText } from "ai"
 import { NextResponse } from "next/server"
-
-const deepseek = createOpenAI({
-  apiKey: "sk-29fe8c9737fc4dde86e97d1621d24586",
-  baseURL: "https://api.deepseek.com/v1",
-})
 
 export async function POST(req: Request) {
   try {
     const { userAnswer, correctAnswer, questionContext } = await req.json()
 
     const { text } = await generateText({
-      model: deepseek("deepseek-chat"),
+      model: "openai/gpt-4o-mini",
       prompt: `You are a football referee answer checker for RefZone. You must evaluate answers based on the IFAB Laws of the Game 2025/26.
 
 Return your answer as strict JSON only — no markdown, no explanations, no text before or after the JSON.

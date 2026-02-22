@@ -94,11 +94,17 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      const { data: customData } = await supabase
+      const { data: customData, error: customError } = await supabase
         .from("user_customization")
         .select("*")
         .eq("user_id", user.id)
         .maybeSingle()
+
+      // If table doesn't exist, silently skip customization
+      if (customError && customError.code === 'PGRST116') {
+        setLoading(false)
+        return
+      }
 
       if (customData) {
         setCustomization(customData)

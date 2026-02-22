@@ -1,12 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
-import { createOpenAI } from "@ai-sdk/openai"
 import { generateText } from "ai"
-
-const deepseek = createOpenAI({
-  apiKey: "sk-29fe8c9737fc4dde86e97d1621d24586",
-  baseURL: "https://api.deepseek.com/v1",
-})
 
 export async function POST(request: Request) {
   try {
@@ -26,7 +20,7 @@ export async function POST(request: Request) {
     }
 
     const { text: responseText } = await generateText({
-      model: deepseek("deepseek-chat"),
+      model: "openai/gpt-4o-mini",
       system: `You are a content moderation assistant for a referee training community forum. 
 Your job is to analyze forum posts and determine if they are appropriate.
 

@@ -1,10 +1,4 @@
-import { createOpenAI } from "@ai-sdk/openai"
 import { generateText } from "ai"
-
-const deepseek = createOpenAI({
-  apiKey: "sk-29fe8c9737fc4dde86e97d1621d24586",
-  baseURL: "https://api.deepseek.com/v1",
-})
 
 const SYSTEM_PROMPT = `You are an expert football referee and Laws of the Game (LOTG) instructor. Your role is to help referees analyze match scenarios based on IFAB Laws of the Game 2025/26.
 
@@ -48,7 +42,7 @@ export async function POST(req: Request) {
     ]
 
     const { text } = await generateText({
-      model: deepseek("deepseek-chat"),
+      model: "openai/gpt-4o-mini",
       messages: conversationMessages,
       maxTokens: 500,
     })
