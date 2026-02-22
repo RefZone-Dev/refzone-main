@@ -31,22 +31,8 @@ export function PhoneNumberPrompt() {
   const timerRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
-    const checkPrompt = async () => {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) return
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("phone_number, phone_prompt_shown, phone_verified")
-        .eq("id", session.user.id)
-        .single()
-
-      if (profile && !profile.phone_prompt_shown && !profile.phone_verified) {
-        setTimeout(() => setOpen(true), 2000)
-      }
-    }
-    checkPrompt()
+    // Phone prompt disabled - feature removed
+    return
   }, [])
 
   useEffect(() => {

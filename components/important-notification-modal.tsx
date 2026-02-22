@@ -18,7 +18,6 @@ interface ImportantNotification {
   id: string
   title: string
   message: string
-  link: string | null
 }
 
 export function ImportantNotificationModal() {
@@ -49,11 +48,10 @@ export function ImportantNotificationModal() {
 
     const seenIds = seenData?.map((s) => s.notification_id) || []
 
+    // Query admin_notifications instead (no user_id filtering needed for global notifications)
     let query = supabase
-      .from("notifications")
-      .select("id, title, message, link")
-      .eq("user_id", uid)
-      .eq("is_important", true)
+      .from("admin_notifications")
+      .select("id, title, message")
       .order("created_at", { ascending: false })
       .limit(1)
 
@@ -79,17 +77,7 @@ export function ImportantNotificationModal() {
       notification_id: notification.id,
     })
 
-    // Also mark the notification as read
-    await supabase.from("notifications").update({ is_read: true }).eq("id", notification.id)
-
     setOpen(false)
-  }
-
-  const handleAction = () => {
-    if (notification?.link) {
-      router.push(notification.link)
-    }
-    markAsSeen()
   }
 
   if (!notification) return null
@@ -107,14 +95,9 @@ export function ImportantNotificationModal() {
           <DialogDescription className="text-base leading-relaxed pt-2">{notification.message}</DialogDescription>
         </DialogHeader>
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={markAsSeen}>
-            Dismiss
+          <Button onClick={markAsSeen} className="w-full">
+            Got it
           </Button>
-          {notification.link && (
-            <Button onClick={handleAction} className="bg-gradient-to-r from-purple-600 to-pink-600">
-              View Details
-            </Button>
-          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
