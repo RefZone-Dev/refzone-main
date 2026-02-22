@@ -54,9 +54,11 @@ export function NavBar() {
       if (session?.user) {
         setUser(session.user)
         setUserLoading(false)
-        // Fetch admin status
-        supabase.from("profiles").select("is_admin").eq("id", session.user.id).single().then(({ data: profile }) => {
-          if (profile?.is_admin) setIsAdmin(true)
+        // Fetch admin status - handle case where column doesn't exist
+        supabase.from("profiles").select("*").eq("id", session.user.id).single().then(({ data: profile, error }) => {
+          if (!error && profile?.is_admin) setIsAdmin(true)
+        }).catch(() => {
+          // Silently fail if profiles table or is_admin column doesn't exist
         })
       } else {
         setUserLoading(false)
@@ -116,7 +118,6 @@ export function NavBar() {
   const mainNavItems = [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }]
 
   const socialNavItems = [
-    { href: "/forum", label: "Forum", icon: MessageSquare },
     { href: "/profile", label: "Your Page", icon: UserCircle },
     { href: "/leaderboard", label: "Leaderboard", icon: Users },
   ]
