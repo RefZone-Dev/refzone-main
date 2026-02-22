@@ -22,9 +22,8 @@ const navItems = [
   { href: "/decision-lab", icon: FlaskConical, label: "DecisionLab", tutorialId: "decision-lab-nav" },
 ]
 
-const socialItems = [
-  { href: "/profile", icon: User, label: "Your Page" },
-  { href: "/leaderboard", icon: Trophy, label: "Leaderboard", tutorialId: "leaderboard-link" },
+const socialItems: { href: string; icon: any; label: string; tutorialId?: string }[] = [
+  // Social section removed per user request
 ]
 
 const accountItems = [

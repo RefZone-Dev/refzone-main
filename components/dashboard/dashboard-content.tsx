@@ -229,8 +229,8 @@ export function DashboardContent({
           <p className="text-muted-foreground">Ready to sharpen your skills today?</p>
         </div>
 
-        {/* Row 1: 3 CTA Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Row 1: 2 CTA Cards */}
+        <div className="grid grid-cols-2 gap-4">
           {/* Scenario CTA with Streak */}
           <Link href="/scenarios" data-tutorial="scenarios" className="block">
             <Card className="border-2 hover:border-primary/50 transition-all hover:shadow-lg group cursor-pointer h-full">
@@ -261,21 +261,6 @@ export function DashboardContent({
                 </div>
                 <h3 className="font-semibold text-foreground mb-1">Quizzes</h3>
                 <p className="text-sm text-muted-foreground">Test knowledge</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          {/* DecisionLab CTA */}
-          <Link href="/decision-lab" data-tutorial="decision-lab" className="block">
-            <Card className="border-2 hover:border-purple-500/50 transition-all hover:shadow-lg group cursor-pointer h-full">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Flask className="h-6 w-6 text-purple-500" />
-                  </div>
-                </div>
-                <h3 className="font-semibold text-foreground mb-1">DecisionLab</h3>
-                <p className="text-sm text-muted-foreground">AI analysis</p>
               </CardContent>
             </Card>
           </Link>
