@@ -13,6 +13,10 @@ const nextConfig = {
       },
     ],
   },
+  // Force rebuild to clear stale cache
+  generateBuildId: async () => {
+    return `build-${Date.now()}`
+  },
 }
 
 export default nextConfig
