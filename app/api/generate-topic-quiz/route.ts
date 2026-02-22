@@ -1,12 +1,6 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
-import { createOpenAI } from "@ai-sdk/openai"
 import { generateText } from "ai"
-
-const deepseek = createOpenAI({
-  apiKey: "sk-29fe8c9737fc4dde86e97d1621d24586",
-  baseURL: "https://api.deepseek.com/v1",
-})
 
 export async function POST(request: Request) {
   try {
@@ -33,7 +27,7 @@ export async function POST(request: Request) {
     const lawsDocument = configData?.config_value || ""
 
     const { text } = await generateText({
-      model: deepseek("deepseek-chat"),
+      model: "openai/gpt-4o-mini",
       system: lawsDocument
         ? `You are a football referee instructor creating a focused quiz. Reference this Laws of the Game document:\n\n${lawsDocument}`
         : "You are a football referee instructor with comprehensive knowledge of IFAB Laws of the Game 2025/26.",

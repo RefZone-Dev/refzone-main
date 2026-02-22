@@ -1,13 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
-import { createOpenAI } from "@ai-sdk/openai"
 import { generateText } from "ai"
-
-const deepseek = createOpenAI({
-  apiKey: "sk-29fe8c9737fc4dde86e97d1621d24586",
-  baseURL: "https://api.deepseek.com/v1",
-})
 
 export async function POST(request: Request) {
   try {
@@ -73,12 +67,12 @@ export async function POST(request: Request) {
     const categoryFilter = category ? `Focus on ${category}.` : "Cover various law categories."
     const quantityNote = quantity > 1 ? `Generate ${quantity} unique quizzes.` : ""
 
-    console.log("[v0] Generating quiz with DeepSeek, quantity:", quantity, "category:", category)
+    console.log("[v0] Generating quiz with OpenAI, quantity:", quantity, "category:", category)
 
     let text: string
     try {
       const result = await generateText({
-        model: deepseek("deepseek-chat"),
+        model: "openai/gpt-4o-mini",
         system: lawsDocument
           ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
           : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",
@@ -130,12 +124,12 @@ ${quantity > 1 ? `{
       })
       text = result.text
     } catch (aiError) {
-      console.error("[v0] DeepSeek API error:", aiError)
+      console.error("[v0] OpenAI API error:", aiError)
       const errorMessage = aiError instanceof Error ? aiError.message : String(aiError)
       return NextResponse.json(
         {
           error: "AI generation failed",
-          details: `DeepSeek API error: ${errorMessage}`,
+          details: `OpenAI API error: ${errorMessage}`,
         },
         { status: 500 },
       )
