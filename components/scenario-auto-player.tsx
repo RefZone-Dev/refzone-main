@@ -463,16 +463,22 @@ export function ScenarioAutoPlayer({
           <CardContent className="space-y-6">
             {/* Video Player */}
             {currentScenario.video_url && (
-              <div className="rounded-lg overflow-hidden border-2 border-border">
-                <video
-                  src={currentScenario.video_url}
-                  controls
-                  className="w-full aspect-video bg-black"
-                  preload="metadata"
-                  key={currentScenario.id}
-                >
-                  Your browser does not support the video tag.
-                </video>
+              <div className="space-y-2">
+                <div className="rounded-lg overflow-hidden border-2 border-border">
+                  <video
+                    src={currentScenario.video_url}
+                    controls
+                    controlsList="nodownload"
+                    className="w-full aspect-video bg-black"
+                    preload="metadata"
+                    key={currentScenario.id}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Videos cannot be screen recorded or downloaded
+                </p>
               </div>
             )}
 

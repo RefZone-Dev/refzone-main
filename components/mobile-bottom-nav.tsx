@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
-import { Home, Settings, LogOut, Moon, Sun, Users, Shield, HelpCircle, Mail, Copy, Check } from "lucide-react"
+import { Home, Settings, LogOut, Moon, Sun, Users, Shield, HelpCircle, Mail, Copy, Check, FlaskConical } from "lucide-react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
@@ -75,7 +75,7 @@ export function MobileBottomNav() {
   }
 
   const isActive = (href: string) => pathname === href
-  const isSocialActive = ["/profile", "/leaderboard"].includes(pathname)
+  const isDecisionLabActive = pathname === "/decision-lab"
   const isAccountActive = ["/settings", "/admin"].includes(pathname)
 
   const GradientUnderline = ({ active }: { active: boolean }) => (
@@ -99,29 +99,16 @@ export function MobileBottomNav() {
             <NotificationsDropdown />
           </div>
 
-          {/* Social dropdown - larger with caption */}
-          <DropdownMenu open={socialOpen} onOpenChange={setSocialOpen}>
-            <DropdownMenuTrigger asChild>
-              <button
-                data-tutorial="social-nav"
-                className="group relative flex flex-col items-center justify-center gap-0.5 p-2 pb-3 rounded-xl cursor-pointer"
-              >
-                <Users className="h-6 w-6" />
-                <span className="text-[10px] text-muted-foreground">Social</span>
-                <GradientUnderline active={isSocialActive} />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" className="w-48">
-              <DropdownMenuItem asChild>
-                <Link href="/profile">Your Page</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link href="/leaderboard" data-tutorial="leaderboard-link">
-                  Leaderboard
-                </Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {/* DecisionLab - larger with caption */}
+          <Link
+            href="/decision-lab"
+            data-tutorial="decision-lab-nav"
+            className="group relative flex flex-col items-center justify-center gap-0.5 p-2 pb-3 rounded-xl cursor-pointer"
+          >
+            <FlaskConical className="h-6 w-6" />
+            <span className="text-[10px] text-muted-foreground">DecisionLab</span>
+            <GradientUnderline active={isDecisionLabActive} />
+          </Link>
 
           {/* Home - larger with caption */}
           <Link

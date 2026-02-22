@@ -117,10 +117,7 @@ export function NavBar() {
 
   const mainNavItems = [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }]
 
-  const socialNavItems = [
-    { href: "/profile", label: "Your Page", icon: UserCircle },
-    { href: "/leaderboard", label: "Leaderboard", icon: Users },
-  ]
+  const socialNavItems: { href: string; label: string; icon: any; tutorialId?: string }[] = []
 
   const bottomNavItems = [
     { href: "/settings", label: "Settings", icon: Settings, tutorialId: "settings-link" },

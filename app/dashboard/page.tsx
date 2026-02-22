@@ -27,7 +27,7 @@ export default async function DashboardPage() {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
   // Run queries in parallel for tables that exist
-  const [scenarioResult, quizResult, recentResult] = await Promise.all([
+  const [scenarioResult, quizResult, recentResult, lawPerformanceResult] = await Promise.all([
     // Scenario responses
     supabase.from("scenario_responses").select("is_correct").eq("user_id", user.id),
     // Quiz attempts
@@ -39,11 +39,18 @@ export default async function DashboardPage() {
       .eq("user_id", user.id)
       .gte("created_at", sevenDaysAgo.toISOString())
       .order("created_at", { ascending: true }),
+    // Law performance
+    supabase
+      .from("user_law_performance")
+      .select("law_category, law_section, accuracy, total_attempts")
+      .eq("user_id", user.id)
+      .order("accuracy", { ascending: true }),
   ])
 
   const scenarioResponses = scenarioResult.data || []
   const quizAttempts = quizResult.data || []
   const recentResponses = recentResult.data || []
+  const lawPerformance = lawPerformanceResult.data || []
 
   const scenarioAccuracy =
     scenarioResponses.length > 0
@@ -72,7 +79,7 @@ export default async function DashboardPage() {
       scenarioAccuracy={scenarioAccuracy}
       quizAccuracy={quizAccuracy}
       forumPosts={[]}
-      lawPerformance={[]}
+      lawPerformance={lawPerformance}
       recentResponses={recentResponses}
       totalScenarios={scenarioResponses.length}
       totalQuizzes={quizAttempts.length}
