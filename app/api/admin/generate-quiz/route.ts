@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     let text: string
     try {
       const result = await generateText({
-        model: "openai/gpt-4o-mini",
+        model: "deepseek/deepseek-chat",
         system: lawsDocument
           ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
           : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",
@@ -204,16 +204,20 @@ ${quantity > 1 ? `{
     let totalQuestions = 0
 
     for (const quiz of quizzesToProcess) {
+      console.log("[v0] Inserting quiz:", quiz.title)
       const { data: newQuiz, error: quizError } = await supabase
         .from("quizzes")
         .insert({
           title: quiz.title,
           description: quiz.description,
           difficulty: quiz.difficulty,
+          time_limit_minutes: quiz.time_limit_minutes || 15,
           is_active: true,
         })
         .select()
         .single()
+      
+      console.log("[v0] Quiz insert result:", { success: !quizError, quizId: newQuiz?.id, error: quizError })
 
       if (quizError) {
         console.error("Failed to insert quiz:", quizError)

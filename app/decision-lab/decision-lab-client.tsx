@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { Send, Loader2, RotateCcw, Scale, AlertTriangle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
@@ -136,8 +135,8 @@ export default function DecisionLabClient() {
               </div>
             </div>
           ) : (
-            <ScrollArea className="flex-1" ref={scrollRef}>
-              <div className="space-y-4 pr-4">
+            <div className="flex-1 overflow-y-auto pr-2" ref={scrollRef}>
+              <div className="space-y-4">
                 {messages.map((message, i) => (
                   <div
                     key={i}
@@ -167,7 +166,7 @@ export default function DecisionLabClient() {
                   </div>
                 )}
               </div>
-            </ScrollArea>
+            </div>
           )}
 
           <form onSubmit={handleSubmit} className="flex gap-2">

@@ -88,7 +88,7 @@ export async function POST() {
 
     // Generate scenario using AI
     const { text } = await generateText({
-      model: "openai/gpt-4o-mini",
+      model: "deepseek/deepseek-chat",
       system: lawsDocument
         ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
         : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",

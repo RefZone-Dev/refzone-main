@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { text } = await generateText({
-      model: "openai/gpt-4o-mini",
+      model: "deepseek/deepseek-chat",
       prompt: `You are an expert football/soccer referee analyzing a scenario answer to categorize it by law.
 
 Given the following referee scenario answer, suggest the most relevant law category and specific law section:

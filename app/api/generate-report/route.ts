@@ -5,7 +5,7 @@ export async function POST(req: Request) {
     const { prompt } = await req.json()
 
     const { text } = await generateText({
-      model: "openai/gpt-4o-mini",
+      model: "deepseek/deepseek-chat",
       prompt,
       maxOutputTokens: 500,
     })

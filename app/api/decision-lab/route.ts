@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     console.log("[v0] Calling generateText with", conversationMessages.length, "messages")
 
     const { text } = await generateText({
-      model: "openai/gpt-4o-mini",
+      model: "deepseek/deepseek-chat",
       messages: conversationMessages,
       maxOutputTokens: 500,
     })
