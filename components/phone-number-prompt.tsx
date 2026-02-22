@@ -32,7 +32,6 @@ export function PhoneNumberPrompt() {
 
   useEffect(() => {
     // Phone prompt disabled - feature removed
-    return
   }, [])
 
   useEffect(() => {
