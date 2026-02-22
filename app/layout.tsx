@@ -10,6 +10,7 @@ import { GlobalTutorialWrapper } from "@/components/tutorial/global-tutorial-wra
 import { PhoneNumberPrompt } from "@/components/phone-number-prompt"
 import { StructuredData } from "@/components/structured-data"
 import DevToolbar from "@/components/DevToolbar"
+import { Toaster } from "@/components/ui/sonner"
 
 import { Geist } from 'next/font/google'
 
@@ -115,6 +116,7 @@ export default function RootLayout({
             <GlobalTutorialWrapper>{children}</GlobalTutorialWrapper>
             <ImportantNotificationModal />
             <PhoneNumberPrompt />
+            <Toaster />
           </CustomizationProvider>
         </ThemeProvider>
 
