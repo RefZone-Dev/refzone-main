@@ -15,6 +15,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
+    const body = await request.json()
+    const { quantity = 1, category = "" } = body
+
     const supabase = createServiceClient()
 
     const { data: profile, error: profileError } = await supabase
@@ -63,6 +66,9 @@ export async function POST(request: Request) {
       })
     }
 
+    const categoryFilter = category ? `Focus on ${category}.` : "Cover various law categories."
+    const quantityNote = quantity > 1 ? `Generate ${quantity} unique quizzes.` : ""
+
     const { text } = await generateText({
       model: groq("llama-3.3-70b-versatile"),
       system: lawsDocument
@@ -70,8 +76,30 @@ export async function POST(request: Request) {
         : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",
       prompt: `${quizPrompt}${existingQuizzesRef}
 
+${quantityNote} ${categoryFilter}
+
 IMPORTANT: Return ONLY valid JSON in this exact format:
-{
+${quantity > 1 ? `{
+  "quizzes": [
+    {
+      "title": "Quiz title (max 60 chars)",
+      "description": "Brief quiz description",
+      "difficulty": "easy" | "medium" | "hard",
+      "questions": [
+        {
+          "question_text": "The question",
+          "question_type": "multiple_choice" | "true_false",
+          "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+          "correct_answer": "Must match one option exactly",
+          "explanation": "Why this is correct",
+          "points_value": 5,
+          "law_category": "Law 1" through "Law 17",
+          "law_section": "Section name"
+        }
+      ]
+    }
+  ]
+}` : `{
   "title": "Quiz title (max 60 chars)",
   "description": "Brief quiz description",
   "difficulty": "easy" | "medium" | "hard",
@@ -87,7 +115,7 @@ IMPORTANT: Return ONLY valid JSON in this exact format:
       "law_section": "Section name"
     }
   ]
-}`,
+}`}`,
     })
 
     let cleanedText = text.trim()
@@ -111,46 +139,61 @@ IMPORTANT: Return ONLY valid JSON in this exact format:
     }
 
     const quizData = JSON.parse(cleanedText)
+    
+    // Handle both single quiz and multiple quizzes format
+    const quizzesToProcess = quizData.quizzes ? quizData.quizzes : [quizData]
+    
+    const createdQuizzes = []
+    let totalQuestions = 0
 
-    const { data: newQuiz, error: quizError } = await supabase
-      .from("quizzes")
-      .insert({
-        title: quizData.title,
-        description: quizData.description,
-        difficulty: quizData.difficulty,
-        is_active: true,
-      })
-      .select()
-      .single()
+    for (const quiz of quizzesToProcess) {
+      const { data: newQuiz, error: quizError } = await supabase
+        .from("quizzes")
+        .insert({
+          title: quiz.title,
+          description: quiz.description,
+          difficulty: quiz.difficulty,
+          is_active: true,
+        })
+        .select()
+        .single()
 
-    if (quizError) {
-      return NextResponse.json({ error: "Failed to insert quiz", details: quizError.message }, { status: 500 })
+      if (quizError) {
+        console.error("Failed to insert quiz:", quizError)
+        continue
+      }
+
+      const questionsToInsert = quiz.questions.map((q: any, index: number) => ({
+        quiz_id: newQuiz.id,
+        question_text: q.question_text,
+        question_type: q.question_type,
+        options: q.options,
+        correct_answer: q.correct_answer,
+        explanation: q.explanation,
+        points_value: q.points_value || q.points || 5,
+        order_index: index,
+        law_category: q.law_category || null,
+        law_section: q.law_section || null,
+      }))
+
+      const { error: questionsError } = await supabase.from("quiz_questions").insert(questionsToInsert)
+
+      if (questionsError) {
+        console.error("Failed to insert questions:", questionsError)
+        await supabase.from("quizzes").delete().eq("id", newQuiz.id)
+        continue
+      }
+
+      createdQuizzes.push(newQuiz)
+      totalQuestions += questionsToInsert.length
     }
 
-    const questionsToInsert = quizData.questions.map((q: any, index: number) => ({
-      quiz_id: newQuiz.id,
-      question_text: q.question_text,
-      question_type: q.question_type,
-      options: q.options,
-      correct_answer: q.correct_answer,
-      explanation: q.explanation,
-      points_value: q.points_value || q.points || 5,
-      order_index: index,
-      law_category: q.law_category || null,
-      law_section: q.law_section || null,
-    }))
-
-    const { error: questionsError } = await supabase.from("quiz_questions").insert(questionsToInsert)
-
-    if (questionsError) {
-      await supabase.from("quizzes").delete().eq("id", newQuiz.id)
-      return NextResponse.json(
-        { error: "Failed to insert questions", details: questionsError.message },
-        { status: 500 },
-      )
-    }
-
-    return NextResponse.json({ success: true, quiz: newQuiz })
+    return NextResponse.json({ 
+      success: true, 
+      quizzesCreated: createdQuizzes.length,
+      questionsCreated: totalQuestions,
+      quizzes: createdQuizzes 
+    })
   } catch (error) {
     console.error("Quiz generation error:", error)
     const errorMessage = error instanceof Error ? error.message : String(error)

@@ -125,17 +125,29 @@ export async function GET(
       actions,
     }))
 
-    // Count forum posts
-    const { count: forumPostsCount } = await serviceClient
-      .from('forum_posts')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
+    // Count forum posts (handle if table doesn't exist)
+    let forumPostsCount = 0
+    try {
+      const { count } = await serviceClient
+        .from('forum_posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+      forumPostsCount = count || 0
+    } catch (e) {
+      console.log('[v0] forum_posts table not available')
+    }
 
-    // Count scenarios completed
-    const { count: scenariosCount } = await serviceClient
-      .from('scenario_results')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
+    // Count scenarios completed (handle if table doesn't exist)
+    let scenariosCount = 0
+    try {
+      const { count } = await serviceClient
+        .from('scenario_results')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+      scenariosCount = count || 0
+    } catch (e) {
+      console.log('[v0] scenario_results table not available')
+    }
 
     // Calculate session stats
     const totalActions = recentActivity?.length || 0

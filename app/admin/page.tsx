@@ -249,22 +249,6 @@ export default function AdminDashboard() {
           </Card>
         </Link>
 
-        <Link href="/admin/verification">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <Shield className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Verification</CardTitle>
-                  <CardDescription className="mt-1">Approve user verification requests</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-        </Link>
-
         <Link href="/admin/notifications">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary">
             <CardHeader>
