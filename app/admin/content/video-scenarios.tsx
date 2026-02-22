@@ -11,8 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge"
 import { Upload, Loader2, CheckCircle2, XCircle, Sparkles } from "lucide-react"
 
-const CHUNK_SIZE = 5 * 1024 * 1024 // 5MB chunks
-
 export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
   const [videoFile, setVideoFile] = useState<File | null>(null)
   const [videoUrl, setVideoUrl] = useState("")
@@ -55,33 +53,6 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
     }
   }
 
-  const uploadChunk = async (
-    chunk: Blob,
-    chunkIndex: number,
-    totalChunks: number,
-    uploadId: string,
-    filename: string
-  ): Promise<{ complete: boolean; url?: string; progress: number }> => {
-    const formData = new FormData()
-    formData.append('chunk', chunk)
-    formData.append('chunkIndex', chunkIndex.toString())
-    formData.append('totalChunks', totalChunks.toString())
-    formData.append('filename', filename)
-    formData.append('uploadId', uploadId)
-
-    const response = await fetch('/api/upload-video', {
-      method: 'POST',
-      body: formData,
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.error || `Chunk ${chunkIndex} upload failed`)
-    }
-
-    return response.json()
-  }
-
   const uploadVideo = useCallback(async () => {
     if (!videoFile) return
 
@@ -90,31 +61,22 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
     setError("")
 
     try {
-      // Generate unique upload ID
-      const uploadId = `${Date.now()}_${Math.random().toString(36).substring(7)}`
-      const totalChunks = Math.ceil(videoFile.size / CHUNK_SIZE)
+      const formData = new FormData()
+      formData.append('file', videoFile)
 
-      // Upload chunks sequentially
-      for (let i = 0; i < totalChunks; i++) {
-        const start = i * CHUNK_SIZE
-        const end = Math.min(start + CHUNK_SIZE, videoFile.size)
-        const chunk = videoFile.slice(start, end)
+      const response = await fetch('/api/upload-video', {
+        method: 'POST',
+        body: formData,
+      })
 
-        const result = await uploadChunk(
-          chunk,
-          i,
-          totalChunks,
-          uploadId,
-          videoFile.name
-        )
-
-        setUploadProgress(result.progress)
-
-        if (result.complete && result.url) {
-          setVideoUrl(result.url)
-          break
-        }
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Upload failed')
       }
+
+      const result = await response.json()
+      setVideoUrl(result.url)
+      setUploadProgress(100)
     } catch (err) {
       console.error("Video upload error:", err)
       setError(err instanceof Error ? err.message : "Failed to upload video.")
