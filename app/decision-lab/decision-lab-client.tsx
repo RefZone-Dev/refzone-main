@@ -50,8 +50,17 @@ export default function DecisionLabClient() {
       }
 
       const data = await response.json()
-      setMessages([...newMessages, { role: "assistant", content: data.response }])
-    } catch {
+      
+      if (data.error) {
+        setMessages([
+          ...newMessages,
+          { role: "assistant", content: `Error: ${data.error}` },
+        ])
+      } else {
+        setMessages([...newMessages, { role: "assistant", content: data.response }])
+      }
+    } catch (error) {
+      console.error("[v0] Decision Lab error:", error)
       setMessages([
         ...newMessages,
         { role: "assistant", content: "Sorry, I encountered an error. Please try again." },

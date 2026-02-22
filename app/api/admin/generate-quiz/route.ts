@@ -75,14 +75,16 @@ export async function POST(request: Request) {
 
     console.log("[v0] Generating quiz with DeepSeek, quantity:", quantity, "category:", category)
 
-    const { text } = await generateText({
-      model: deepseek("deepseek-chat"),
-      system: lawsDocument
-        ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
-        : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",
-      maxTokens: 4000,
-      temperature: 0.7,
-      prompt: `${quizPrompt}${existingQuizzesRef}
+    let text: string
+    try {
+      const result = await generateText({
+        model: deepseek("deepseek-chat"),
+        system: lawsDocument
+          ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
+          : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",
+        maxTokens: 4000,
+        temperature: 0.7,
+        prompt: `${quizPrompt}${existingQuizzesRef}
 
 ${quantityNote} ${categoryFilter}
 
@@ -125,7 +127,19 @@ ${quantity > 1 ? `{
     }
   ]
 }`}`,
-    })
+      })
+      text = result.text
+    } catch (aiError) {
+      console.error("[v0] DeepSeek API error:", aiError)
+      const errorMessage = aiError instanceof Error ? aiError.message : String(aiError)
+      return NextResponse.json(
+        {
+          error: "AI generation failed",
+          details: `DeepSeek API error: ${errorMessage}`,
+        },
+        { status: 500 },
+      )
+    }
 
     console.log("[v0] Raw AI response length:", text.length)
     console.log("[v0] First 200 chars:", text.substring(0, 200))

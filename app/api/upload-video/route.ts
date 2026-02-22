@@ -1,19 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { type NextRequest, NextResponse } from 'next/server'
+import { put } from '@vercel/blob'
 
-// Chunk upload endpoint - handles individual chunks
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
-    const chunk = formData.get('chunk') as Blob
-    const chunkIndex = parseInt(formData.get('chunkIndex') as string)
-    const totalChunks = parseInt(formData.get('totalChunks') as string)
-    const filename = formData.get('filename') as string
-    const uploadId = formData.get('uploadId') as string
+    const file = formData.get('file') as File | null
 
-    if (!chunk || !filename || !uploadId) {
+    if (!file) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'No file provided' },
         { status: 400 }
       )
     }
@@ -42,103 +38,38 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Convert blob to buffer
-    const arrayBuffer = await chunk.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
+    console.log('[v0] Uploading video to Vercel Blob:', file.name, 'Size:', file.size)
 
-    // Store chunk temporarily
-    const chunkPath = `temp/${uploadId}/${chunkIndex}`
-    const { error: chunkError } = await supabase.storage
-      .from('uploads')
-      .upload(chunkPath, buffer, {
-        contentType: 'application/octet-stream',
-        upsert: true,
-      })
+    // Upload to Vercel Blob (no file size limit)
+    const blob = await put(`scenarios/${Date.now()}_${file.name}`, file, {
+      access: 'public',
+      contentType: file.type || 'video/mp4',
+    })
 
-    if (chunkError) {
-      console.error('[v0] Chunk upload error:', chunkError)
-      return NextResponse.json(
-        { error: `Failed to upload chunk: ${chunkError.message}` },
-        { status: 500 }
-      )
-    }
+    console.log('[v0] Video uploaded successfully:', blob.url)
 
-    // If this is the last chunk, assemble the file
-    if (chunkIndex === totalChunks - 1) {
-      try {
-        // Download and assemble all chunks
-        const chunks: Buffer[] = []
-        for (let i = 0; i < totalChunks; i++) {
-          const { data: chunkData, error: downloadError } = await supabase.storage
-            .from('uploads')
-            .download(`temp/${uploadId}/${i}`)
-          
-          if (downloadError || !chunkData) {
-            throw new Error(`Failed to download chunk ${i}`)
-          }
-          
-          const chunkBuffer = Buffer.from(await chunkData.arrayBuffer())
-          chunks.push(chunkBuffer)
-        }
-
-        // Combine all chunks
-        const finalBuffer = Buffer.concat(chunks)
-
-        // Upload final file to scenarios bucket
-        const filePath = `videos/${Date.now()}_${filename}`
-        const { error: uploadError } = await supabase.storage
-          .from('scenarios')
-          .upload(filePath, finalBuffer, {
-            contentType: 'video/mp4',
-            cacheControl: '3600',
-          })
-
-        if (uploadError) {
-          console.error('[v0] Final file upload error:', uploadError)
-          throw uploadError
-        }
-
-        // Get public URL
-        const { data: { publicUrl } } = supabase.storage
-          .from('scenarios')
-          .getPublicUrl(filePath)
-
-        // Clean up temp chunks
-        for (let i = 0; i < totalChunks; i++) {
-          await supabase.storage
-            .from('uploads')
-            .remove([`temp/${uploadId}/${i}`])
-        }
-
-        return NextResponse.json({
-          complete: true,
-          url: publicUrl,
-          path: filePath,
-        })
-      } catch (assembleError) {
-        console.error('[v0] File assembly error:', assembleError)
-        const errorMsg = assembleError instanceof Error ? assembleError.message : 'Failed to assemble file'
-        return NextResponse.json(
-          { error: `Assembly failed: ${errorMsg}` },
-          { status: 500 }
-        )
-      }
-    }
-
-    // Return progress for non-final chunks
     return NextResponse.json({
-      complete: false,
-      chunkIndex,
-      totalChunks,
-      progress: Math.round(((chunkIndex + 1) / totalChunks) * 100),
+      url: blob.url,
+      downloadUrl: blob.downloadUrl,
+      pathname: blob.pathname,
+      contentType: blob.contentType,
+      size: file.size,
     })
   } catch (error) {
     console.error('[v0] Upload error:', error)
     const errorMsg = error instanceof Error ? error.message : 'Upload failed'
-    console.error('[v0] Error details:', errorMsg)
     return NextResponse.json(
       { error: `Upload failed: ${errorMsg}` },
       { status: 500 }
     )
   }
+}
+
+// Increase the body size limit for video uploads
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '500mb',
+    },
+  },
 }
