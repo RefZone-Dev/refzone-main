@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 import { generateText } from "ai"
+import { getModel } from "@/lib/ai-model"
 
 const VALID_SCENARIO_TYPES = ["foul", "offside", "handball", "misconduct", "advantage", "var"] as const
 type ScenarioType = (typeof VALID_SCENARIO_TYPES)[number]
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
     }
 
     const { text } = await generateText({
-      model: "openai/gpt-4o-mini",
+      model: getModel(),
       system: lawsDocument
         ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
         : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",

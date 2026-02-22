@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 import { generateText } from "ai"
+import { getModel } from "@/lib/ai-model"
 
 export const dynamic = "force-dynamic"
 
@@ -17,7 +18,7 @@ export async function GET(request: Request) {
 
   try {
     const { text } = await generateText({
-      model: "openai/gpt-4o-mini",
+      model: getModel(),
       prompt: `Generate a realistic football/soccer refereeing scenario for training purposes based on the IFAB Laws of the Game 2025/26. The scenario should test decision-making skills and be based on actual Laws.
 
 IMPORTANT: All scenarios, decisions, and explanations MUST reference and comply with the official IFAB Laws of the Game 2025/26, including:

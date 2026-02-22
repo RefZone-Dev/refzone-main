@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 import { generateText } from "ai"
+import { getModel } from "@/lib/ai-model"
 
 export async function POST(request: Request) {
   try {
@@ -74,12 +75,10 @@ export async function POST(request: Request) {
     const categoryFilter = category ? `Focus on ${category}.` : "Cover various law categories."
     const quantityNote = quantity > 1 ? `Generate ${quantity} unique quizzes.` : ""
 
-    console.log("[v0] Generating quiz with OpenAI, quantity:", quantity, "category:", category)
-
     let text: string
     try {
       const result = await generateText({
-        model: "openai/gpt-4o-mini",
+        model: getModel(),
         system: lawsDocument
           ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
           : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",

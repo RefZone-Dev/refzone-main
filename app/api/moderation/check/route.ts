@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { generateText } from "ai"
+import { getModel } from "@/lib/ai-model"
 
 export async function POST(request: Request) {
   try {
@@ -20,7 +21,7 @@ export async function POST(request: Request) {
     }
 
     const { text: responseText } = await generateText({
-      model: "openai/gpt-4o-mini",
+      model: getModel(),
       system: `You are a content moderation assistant for a referee training community forum. 
 Your job is to analyze forum posts and determine if they are appropriate.
 

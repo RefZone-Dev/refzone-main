@@ -1,6 +1,7 @@
 import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 import { generateText } from "ai"
+import { getModel } from "@/lib/ai-model"
 
 export const dynamic = "force-dynamic"
 
@@ -17,7 +18,7 @@ export async function GET(request: Request) {
 
   try {
     const { text } = await generateText({
-      model: "openai/gpt-4o-mini",
+      model: getModel(),
       prompt: `Generate a football/soccer refereeing quiz with 5 questions to test Laws of the Game knowledge based on the IFAB Laws of the Game 2025/26.
 
 CRITICAL: All questions, answers, and explanations MUST be based on and accurately reflect the official IFAB Laws of the Game 2025/26, including:

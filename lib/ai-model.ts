@@ -1,9 +1,13 @@
-import { openai } from "@ai-sdk/openai"
+import { createGroq } from "@ai-sdk/groq"
+
+const groq = createGroq({
+  apiKey: process.env.GROQ_API_KEY,
+})
 
 /**
  * Returns the AI model to use across all API routes.
- * Uses @ai-sdk/openai provider which reads OPENAI_API_KEY from env.
+ * Uses Groq for fast, free LLM inference.
  */
-export function getModel(modelId: string = "gpt-4o-mini") {
-  return openai(modelId)
+export function getModel(modelId: string = "llama-3.3-70b-versatile") {
+  return groq(modelId)
 }

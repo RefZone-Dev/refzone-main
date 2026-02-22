@@ -1,4 +1,5 @@
 import { generateText } from "ai"
+import { getModel } from "@/lib/ai-model"
 
 const SYSTEM_PROMPT = `You are an expert football referee and Laws of the Game (LOTG) instructor. Your role is to help referees analyze match scenarios based on IFAB Laws of the Game 2025/26.
 
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
     ]
 
     const { text } = await generateText({
-      model: "openai/gpt-4o-mini",
+      model: getModel(),
       messages: conversationMessages,
       maxOutputTokens: 500,
     })

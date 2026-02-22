@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { generateText } from "ai"
+import { getModel } from "@/lib/ai-model"
 
 export async function POST(request: Request) {
   try {
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
     const lawsDocument = configData?.config_value || ""
 
     const { text } = await generateText({
-      model: "openai/gpt-4o-mini",
+      model: getModel(),
       system: lawsDocument
         ? `You are a football referee instructor creating a focused quiz. Reference this Laws of the Game document:\n\n${lawsDocument}`
         : "You are a football referee instructor with comprehensive knowledge of IFAB Laws of the Game 2025/26.",

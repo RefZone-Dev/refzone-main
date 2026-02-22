@@ -1,4 +1,5 @@
 import { generateText } from "ai"
+import { getModel } from "@/lib/ai-model"
 import { NextResponse } from "next/server"
 
 export async function POST(req: Request) {
@@ -6,7 +7,7 @@ export async function POST(req: Request) {
     const { userAnswer, correctAnswer, questionContext } = await req.json()
 
     const { text } = await generateText({
-      model: "openai/gpt-4o-mini",
+      model: getModel(),
       prompt: `You are a football referee answer checker for RefZone. You must evaluate answers based on the IFAB Laws of the Game 2025/26.
 
 Return your answer as strict JSON only — no markdown, no explanations, no text before or after the JSON.
