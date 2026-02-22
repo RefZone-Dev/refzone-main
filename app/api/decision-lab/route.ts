@@ -31,7 +31,16 @@ interface Message {
 
 export async function POST(req: Request) {
   try {
-    const { messages, isInitial } = await req.json()
+    console.log("[v0] DecisionLab API called")
+    const body = await req.json()
+    console.log("[v0] Request body:", JSON.stringify(body))
+    
+    const { messages, isInitial } = body
+
+    if (!messages || !Array.isArray(messages)) {
+      console.error("[v0] Invalid messages format:", messages)
+      return Response.json({ error: "Invalid request: messages must be an array" }, { status: 400 })
+    }
 
     const conversationMessages = [
       { role: "system" as const, content: SYSTEM_PROMPT },
@@ -41,11 +50,15 @@ export async function POST(req: Request) {
       })),
     ]
 
+    console.log("[v0] Calling generateText with", conversationMessages.length, "messages")
+
     const { text } = await generateText({
       model: "openai/gpt-4o-mini",
       messages: conversationMessages,
-      maxOutputTokens: 500,
+      maxTokens: 500,
     })
+
+    console.log("[v0] Generated text length:", text?.length || 0)
 
     if (!text || text.trim().length === 0) {
       console.error("[v0] DecisionLab returned empty response")
@@ -55,6 +68,11 @@ export async function POST(req: Request) {
     return Response.json({ response: text })
   } catch (error) {
     console.error("[v0] Error in DecisionLab:", error)
-    return Response.json({ error: "Failed to analyze scenario" }, { status: 500 })
+    console.error("[v0] Error details:", error instanceof Error ? error.message : String(error))
+    console.error("[v0] Error stack:", error instanceof Error ? error.stack : "No stack trace")
+    return Response.json({ 
+      error: "Failed to analyze scenario",
+      details: error instanceof Error ? error.message : String(error)
+    }, { status: 500 })
   }
 }
