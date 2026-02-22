@@ -1,75 +1,49 @@
+import { handleUpload, type HandleUploadBody } from '@vercel/blob/client'
 import { createClient } from '@/lib/supabase/server'
-import { type NextRequest, NextResponse } from 'next/server'
-import { put } from '@vercel/blob'
+import { NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
+  const body = (await request.json()) as HandleUploadBody
+
   try {
-    const formData = await request.formData()
-    const file = formData.get('file') as File | null
+    const jsonResponse = await handleUpload({
+      body,
+      request,
+      onBeforeGenerateToken: async () => {
+        // Verify admin access before allowing upload
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
 
-    if (!file) {
-      return NextResponse.json(
-        { error: 'No file provided' },
-        { status: 400 }
-      )
-    }
+        if (!user) {
+          throw new Error('Unauthorized')
+        }
 
-    // Verify admin access
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('is_admin')
+          .eq('id', user.id)
+          .single()
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+        if (!profile?.is_admin) {
+          throw new Error('Admin access required')
+        }
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile?.is_admin) {
-      return NextResponse.json(
-        { error: 'Admin access required' },
-        { status: 403 }
-      )
-    }
-
-    console.log('[v0] Uploading video to Vercel Blob:', file.name, 'Size:', file.size)
-
-    // Upload to Vercel Blob (no file size limit)
-    const blob = await put(`scenarios/${Date.now()}_${file.name}`, file, {
-      access: 'public',
-      contentType: file.type || 'video/mp4',
+        return {
+          allowedContentTypes: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/mpeg', 'video/ogg', 'video/x-matroska'],
+          maximumSizeInBytes: 500 * 1024 * 1024, // 500MB
+        }
+      },
+      onUploadCompleted: async ({ blob }) => {
+        console.log('[v0] Video upload completed:', blob.url)
+      },
     })
 
-    console.log('[v0] Video uploaded successfully:', blob.url)
-
-    return NextResponse.json({
-      url: blob.url,
-      downloadUrl: blob.downloadUrl,
-      pathname: blob.pathname,
-      contentType: blob.contentType,
-      size: file.size,
-    })
+    return NextResponse.json(jsonResponse)
   } catch (error) {
     console.error('[v0] Upload error:', error)
-    const errorMsg = error instanceof Error ? error.message : 'Upload failed'
     return NextResponse.json(
-      { error: `Upload failed: ${errorMsg}` },
-      { status: 500 }
+      { error: error instanceof Error ? error.message : 'Upload failed' },
+      { status: 400 },
     )
   }
-}
-
-// Increase the body size limit for video uploads
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '500mb',
-    },
-  },
 }
