@@ -5,7 +5,7 @@ export async function POST(req: Request) {
     const { prompt } = await req.json()
 
     const { text } = await generateText({
-      model: "deepseek/deepseek-chat",
+      model: "groq/llama-3.3-70b-versatile",
       prompt,
       maxOutputTokens: 500,
     })

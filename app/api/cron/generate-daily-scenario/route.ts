@@ -17,7 +17,7 @@ export async function GET(request: Request) {
 
   try {
     const { text } = await generateText({
-      model: "deepseek/deepseek-chat",
+      model: "groq/llama-3.3-70b-versatile",
       prompt: `Generate a realistic football/soccer refereeing scenario for training purposes based on the IFAB Laws of the Game 2025/26. The scenario should test decision-making skills and be based on actual Laws.
 
 IMPORTANT: All scenarios, decisions, and explanations MUST reference and comply with the official IFAB Laws of the Game 2025/26, including:

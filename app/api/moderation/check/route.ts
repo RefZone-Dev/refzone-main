@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     }
 
     const { text: responseText } = await generateText({
-      model: "deepseek/deepseek-chat",
+      model: "groq/llama-3.3-70b-versatile",
       system: `You are a content moderation assistant for a referee training community forum. 
 Your job is to analyze forum posts and determine if they are appropriate.
 
