@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { Shield, Users, Target, BookOpen, MessageSquare, TrendingUp, Flag, Settings, Award, Bell, AlertCircle } from "lucide-react"
+import { Shield, Users, Target, BookOpen, MessageSquare, TrendingUp, Settings, Bell, AlertCircle } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
 
@@ -55,11 +55,10 @@ export default function AdminDashboard() {
       setIsAdmin(true)
 
       // Fetch statistics
-      const [usersRes, scenariosRes, quizzesRes, reportsRes, feedbackRes] = await Promise.all([
+      const [usersRes, scenariosRes, quizzesRes, feedbackRes] = await Promise.all([
         supabase.from("profiles").select("id, last_activity_date", { count: "exact" }),
         supabase.from("scenario_responses").select("id", { count: "exact" }),
         supabase.from("quiz_attempts").select("id", { count: "exact" }),
-        supabase.from("match_reports").select("id", { count: "exact" }),
         supabase.from("user_feedback").select("id", { count: "exact" }),
       ])
 
@@ -77,7 +76,7 @@ export default function AdminDashboard() {
         activeUsers,
         totalScenarios: scenariosRes.count || 0,
         totalQuizzes: quizzesRes.count || 0,
-        totalReports: reportsRes.count || 0,
+        totalReports: 0,
         totalFeedback: feedbackRes.count || 0,
         avgAccuracy: 0,
       })
@@ -193,22 +192,6 @@ export default function AdminDashboard() {
                 <div>
                   <CardTitle>Content Management</CardTitle>
                   <CardDescription className="mt-1">Manage scenarios, quizzes, and shop items</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-        </Link>
-
-        <Link href="/admin/moderation">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <Flag className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>Forum Moderation</CardTitle>
-                  <CardDescription className="mt-1">Moderate forum posts and manage community</CardDescription>
                 </div>
               </div>
             </CardHeader>

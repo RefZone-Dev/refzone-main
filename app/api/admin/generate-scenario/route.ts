@@ -1,3 +1,4 @@
+import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 import { createGroq } from "@ai-sdk/groq"
@@ -49,10 +50,14 @@ function validateScenarioType(type: string): ScenarioType {
 
 export async function POST(request: Request) {
   try {
-    const userId = request.headers.get("x-user-id")
+    const authClient = await createClient()
+    const { data: { user } } = await authClient.auth.getUser()
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
+    }
+
+    const userId = user.id
     }
 
     const supabase = createServiceClient()

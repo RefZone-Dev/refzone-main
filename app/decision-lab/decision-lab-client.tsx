@@ -5,7 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Send, Loader2, RotateCcw, Scale } from "lucide-react"
+import { Send, Loader2, RotateCcw, Scale, AlertTriangle } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 
 interface Message {
   role: "user" | "assistant"
@@ -68,10 +69,27 @@ export default function DecisionLabClient() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Decision Lab</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight">Decision Lab</h1>
+          <Badge variant="outline" className="border-amber-500/50 bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold">
+            BETA
+          </Badge>
+        </div>
         <p className="text-muted-foreground mt-1">
           Describe a match scenario and get expert analysis based on the Laws of the Game
         </p>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+        <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+        <div className="text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">Beta Feature - AI Disclaimer</p>
+          <p className="mt-1">
+            This feature uses AI to analyze scenarios. AI responses may be inaccurate or incomplete.
+            Always refer to the official IFAB Laws of the Game for definitive rulings. Do not use
+            AI-generated analysis as the sole basis for match decisions.
+          </p>
+        </div>
       </div>
 
       <Card className="flex flex-col" style={{ height: "calc(100vh - 280px)" }}>
@@ -114,7 +132,7 @@ export default function DecisionLabClient() {
                 {messages.map((message, i) => (
                   <div
                     key={i}
-                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                    className={`flex flex-col ${message.role === "user" ? "items-end" : "items-start"}`}
                   >
                     <div
                       className={`max-w-[80%] rounded-lg px-4 py-3 text-sm ${
@@ -125,6 +143,11 @@ export default function DecisionLabClient() {
                     >
                       <p className="whitespace-pre-wrap">{message.content}</p>
                     </div>
+                    {message.role === "assistant" && (
+                      <p className="text-xs text-muted-foreground mt-1 ml-1 italic">
+                        AI-generated analysis - may contain errors. Verify with official LOTG.
+                      </p>
+                    )}
                   </div>
                 ))}
                 {isLoading && (

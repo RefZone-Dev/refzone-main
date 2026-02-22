@@ -3,13 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
-import { Bell, Loader2, Info, Moon, Sun, Monitor, BadgeCheck, CheckCircle2, MessageSquare, ThumbsUp, User, Mail, Shield, AlertTriangle, Pencil, X, Phone, Calendar, ShieldCheck } from "lucide-react"
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
+import { Loader2, Info, Moon, Sun, Monitor, User, Mail, Shield, AlertTriangle, Pencil, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { CustomModal } from "@/components/custom-modal"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -33,33 +30,12 @@ export default function SettingsPage() {
   const [isEditingUsername, setIsEditingUsername] = useState(false)
   const [isCheckingName, setIsCheckingName] = useState(false)
   const [nameAvailable, setNameAvailable] = useState<boolean | null>(null)
-  const [dateOfBirth, setDateOfBirth] = useState("")
-  const [originalDateOfBirth, setOriginalDateOfBirth] = useState("")
-  const [phoneNumber, setPhoneNumber] = useState("")
-  const [originalPhoneNumber, setOriginalPhoneNumber] = useState("")
-  const [phoneVerified, setPhoneVerified] = useState(false)
-  const [phoneVerifyStep, setPhoneVerifyStep] = useState<"idle" | "sending" | "verify" | "verifying">("idle")
-  const [phoneCode, setPhoneCode] = useState("")
-  const [phoneVerifyError, setPhoneVerifyError] = useState<string | null>(null)
-  const [resendCooldown, setResendCooldown] = useState(0)
-  const [isVerified, setIsVerified] = useState(false)
-  const [verificationRequested, setVerificationRequested] = useState(false)
-  const [isRequestingVerification, setIsRequestingVerification] = useState(false)
   
   // Password change
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isChangingPassword, setIsChangingPassword] = useState(false)
-  
-  const [settings, setSettings] = useState({
-    newQuizNotifications: true,
-    reminderNotifications: true,
-    notifyForumReplies: true,
-    notifyForumLikes: true,
-    dailyNotificationTime: "17:00",
-  })
-  const [originalSettings, setOriginalSettings] = useState(settings)
   
   const [isSaving, setIsSaving] = useState(false)
   const [modal, setModal] = useState({
@@ -87,11 +63,8 @@ export default function SettingsPage() {
   // Check for unsaved changes
   useEffect(() => {
     const usernameChanged = isEditingUsername && username !== originalUsername
-    const settingsChanged = JSON.stringify(settings) !== JSON.stringify(originalSettings)
-    const dobChanged = dateOfBirth !== originalDateOfBirth
-    const phoneChanged = phoneNumber !== originalPhoneNumber
-    setHasUnsavedChanges(usernameChanged || settingsChanged || dobChanged || phoneChanged)
-  }, [username, originalUsername, isEditingUsername, settings, originalSettings, dateOfBirth, originalDateOfBirth, phoneNumber, originalPhoneNumber])
+    setHasUnsavedChanges(usernameChanged)
+  }, [username, originalUsername, isEditingUsername])
 
   // Handle browser back/navigation with unsaved changes
   useEffect(() => {
@@ -146,31 +119,13 @@ export default function SettingsPage() {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select(
-          "display_name, weekly_quiz_notifications, reminder_notifications, is_verified, verification_requested, date_of_birth, phone_number, phone_verified",
-        )
+        .select("display_name")
         .eq("id", user.id)
         .single()
 
       if (profile) {
         setUsername(profile.display_name || "")
         setOriginalUsername(profile.display_name || "")
-        setDateOfBirth(profile.date_of_birth || "")
-        setOriginalDateOfBirth(profile.date_of_birth || "")
-        setPhoneNumber(profile.phone_number || "")
-        setOriginalPhoneNumber(profile.phone_number || "")
-        setPhoneVerified(profile.phone_verified || false)
-        setIsVerified(profile.is_verified || false)
-        setVerificationRequested(profile.verification_requested || false)
-        const loadedSettings = {
-          newQuizNotifications: profile.weekly_quiz_notifications ?? true,
-          reminderNotifications: profile.reminder_notifications ?? true,
-          notifyForumReplies: true,
-          notifyForumLikes: true,
-          dailyNotificationTime: "17:00",
-        }
-        setSettings(loadedSettings)
-        setOriginalSettings(loadedSettings)
       }
     }
 
@@ -219,30 +174,6 @@ export default function SettingsPage() {
       onConfirm,
     })
   }, [])
-
-  const handleRequestVerification = async () => {
-    if (!userId) return
-
-    setIsRequestingVerification(true)
-
-    try {
-      const response = await fetch("/api/user/request-verification", {
-        method: "POST",
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to request verification")
-      }
-
-      setVerificationRequested(true)
-      showModal("success", "Verification Requested", "Your verification request has been submitted for review.")
-    } catch (error) {
-      console.error("Error requesting verification:", error)
-      showModal("error", "Request Failed", "Failed to submit verification request. Please try again.")
-    } finally {
-      setIsRequestingVerification(false)
-    }
-  }
 
   const handleChangePassword = async () => {
     if (!newPassword || !confirmPassword) {
@@ -297,11 +228,7 @@ export default function SettingsPage() {
       const updateData: Record<string, unknown> = {
           display_name: username,
           has_set_username: true,
-          weekly_quiz_notifications: settings.newQuizNotifications,
-          reminder_notifications: settings.reminderNotifications,
       }
-      if (dateOfBirth) updateData.date_of_birth = dateOfBirth
-      if (phoneNumber !== originalPhoneNumber) updateData.phone_number = phoneNumber || null
 
       const { error } = await supabase
         .from("profiles")
@@ -311,9 +238,6 @@ export default function SettingsPage() {
       if (error) throw error
 
       setOriginalUsername(username)
-      setOriginalDateOfBirth(dateOfBirth)
-      setOriginalPhoneNumber(phoneNumber)
-      setOriginalSettings(settings)
       setIsEditingUsername(false)
       setHasUnsavedChanges(false)
       showModal("success", "Settings Saved", "Your settings have been saved successfully!")
@@ -329,74 +253,8 @@ export default function SettingsPage() {
     }
   }
 
-  useEffect(() => {
-    if (resendCooldown > 0) {
-      const timer = setTimeout(() => setResendCooldown(resendCooldown - 1), 1000)
-      return () => clearTimeout(timer)
-    }
-  }, [resendCooldown])
-
-  const handleSendPhoneCode = async () => {
-    if (!phoneNumber.trim()) {
-      setPhoneVerifyError("Please enter a phone number first.")
-      return
-    }
-    setPhoneVerifyStep("sending")
-    setPhoneVerifyError(null)
-    try {
-      const res = await fetch("/api/phone/send-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumber: phoneNumber.trim() }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setPhoneVerifyError(data.error || "Failed to send code.")
-        setPhoneVerifyStep("idle")
-        return
-      }
-      setPhoneVerifyStep("verify")
-      setResendCooldown(60)
-    } catch {
-      setPhoneVerifyError("An unexpected error occurred.")
-      setPhoneVerifyStep("idle")
-    }
-  }
-
-  const handleVerifyPhoneCode = async () => {
-    if (phoneCode.length !== 6) {
-      setPhoneVerifyError("Please enter the full 6-digit code.")
-      return
-    }
-    setPhoneVerifyStep("verifying")
-    setPhoneVerifyError(null)
-    try {
-      const res = await fetch("/api/phone/verify-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: phoneCode }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setPhoneVerifyError(data.error || "Verification failed.")
-        setPhoneVerifyStep("verify")
-        return
-      }
-      setPhoneVerified(true)
-      setOriginalPhoneNumber(phoneNumber)
-      setPhoneVerifyStep("idle")
-      setPhoneCode("")
-    } catch {
-      setPhoneVerifyError("An unexpected error occurred.")
-      setPhoneVerifyStep("verify")
-    }
-  }
-
   const handleDiscardChanges = () => {
     setUsername(originalUsername)
-    setDateOfBirth(originalDateOfBirth)
-    setPhoneNumber(originalPhoneNumber)
-    setSettings(originalSettings)
     setIsEditingUsername(false)
     setHasUnsavedChanges(false)
     setNameAvailable(null)
@@ -576,175 +434,6 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="dob" className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              Date of Birth
-            </Label>
-            <Input
-              id="dob"
-              type="date"
-              value={dateOfBirth}
-              onChange={(e) => setDateOfBirth(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">
-              Collected for compliance with Australian law, including the Online Safety Amendment (Social Media Minimum Age) Act 2024.
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="phone" className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-muted-foreground" />
-              Phone Number
-              {phoneVerified && (
-                <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-normal">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Verified
-                </span>
-              )}
-            </Label>
-
-            {phoneVerifyStep === "verify" || phoneVerifyStep === "verifying" ? (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  {"Enter the 6-digit code sent to "}
-                  <span className="font-medium text-foreground">{phoneNumber}</span>
-                </p>
-                <div className="flex justify-center">
-                  <InputOTP maxLength={6} value={phoneCode} onChange={setPhoneCode}>
-                    <InputOTPGroup>
-                      <InputOTPSlot index={0} />
-                      <InputOTPSlot index={1} />
-                      <InputOTPSlot index={2} />
-                      <InputOTPSlot index={3} />
-                      <InputOTPSlot index={4} />
-                      <InputOTPSlot index={5} />
-                    </InputOTPGroup>
-                  </InputOTP>
-                </div>
-                {phoneVerifyError && (
-                  <p className="text-sm text-red-600 dark:text-red-400">{phoneVerifyError}</p>
-                )}
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="cursor-pointer bg-transparent"
-                    onClick={() => { setPhoneVerifyStep("idle"); setPhoneCode(""); setPhoneVerifyError(null) }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="cursor-pointer"
-                    onClick={handleVerifyPhoneCode}
-                    disabled={phoneVerifyStep === "verifying" || phoneCode.length !== 6}
-                  >
-                    {phoneVerifyStep === "verifying" ? (
-                      <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Verifying...</>
-                    ) : "Verify Code"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="cursor-pointer"
-                    onClick={handleSendPhoneCode}
-                    disabled={resendCooldown > 0}
-                  >
-                    {resendCooldown > 0 ? `Resend (${resendCooldown}s)` : "Resend"}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="flex gap-2">
-                  <Input
-                    id="phone"
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => {
-                      setPhoneNumber(e.target.value)
-                      if (e.target.value !== originalPhoneNumber) setPhoneVerified(false)
-                    }}
-                    placeholder="e.g. 0412 345 678"
-                    className="flex-1"
-                  />
-                  {phoneNumber.trim() && !phoneVerified && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="cursor-pointer bg-transparent shrink-0"
-                      onClick={handleSendPhoneCode}
-                      disabled={phoneVerifyStep === "sending"}
-                    >
-                      {phoneVerifyStep === "sending" ? (
-                        <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />Sending...</>
-                      ) : "Verify"}
-                    </Button>
-                  )}
-                </div>
-                {phoneVerifyError && phoneVerifyStep === "idle" && (
-                  <p className="text-sm text-red-600 dark:text-red-400">{phoneVerifyError}</p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                  Used for account recovery if you forget your password. {!phoneVerified && phoneNumber.trim() ? "Please verify your number." : ""}
-                </p>
-              </>
-            )}
-          </div>
-
-          <div className="pt-4 border-t">
-            {isVerified ? (
-              <div className="flex items-center gap-2 text-blue-500">
-                <BadgeCheck className="h-5 w-5" />
-                <div>
-                  <p className="font-medium">RefZone Staff</p>
-                  <p className="text-sm text-muted-foreground">You are a verified RefZone staff member</p>
-                </div>
-              </div>
-            ) : verificationRequested ? (
-              <div className="flex items-center gap-2 text-amber-500">
-                <CheckCircle2 className="h-5 w-5" />
-                <div>
-                  <p className="font-medium">Staff Verification Pending</p>
-                  <p className="text-sm text-muted-foreground">Your staff verification request is under review</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <BadgeCheck className="h-5 w-5 text-muted-foreground" />
-                  <div>
-                    <p className="font-medium">Staff Verification</p>
-                    <p className="text-sm text-muted-foreground">
-                      The blue checkmark is reserved for RefZone staff members only
-                    </p>
-                  </div>
-                </div>
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    Only apply for verification if you are a member of the RefZone team. This badge indicates official staff, not general user verification.
-                  </AlertDescription>
-                </Alert>
-                <Button onClick={handleRequestVerification} disabled={isRequestingVerification} size="sm" variant="outline" className="bg-transparent">
-                  {isRequestingVerification ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Requesting...
-                    </>
-                  ) : (
-                    "Request Staff Verification"
-                  )}
-                </Button>
-              </div>
-            )}
-          </div>
         </CardContent>
       </Card>
 
@@ -863,112 +552,6 @@ export default function SettingsPage() {
           </div>
           {mounted && theme === "dark" && (
             <p className="text-sm text-muted-foreground italic mt-2">Dark mode for Liam</p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5" />
-            <CardTitle>Notification Preferences</CardTitle>
-          </div>
-          <CardDescription>Choose what notifications you'd like to receive</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Alert>
-            <Info className="h-4 w-4" />
-            <AlertDescription>
-              Notification preferences are stored for future use. Email notifications will be implemented in an upcoming
-              release.
-            </AlertDescription>
-          </Alert>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="new-quiz">New Quiz Notifications</Label>
-              <p className="text-sm text-muted-foreground">Get notified when a new quiz is created</p>
-            </div>
-            <Switch
-              id="new-quiz"
-              checked={settings.newQuizNotifications}
-              onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, newQuizNotifications: checked }))}
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label htmlFor="reminders">Training Reminders</Label>
-              <p className="text-sm text-muted-foreground">Get reminders to complete your daily training</p>
-            </div>
-            <Switch
-              id="reminders"
-              checked={settings.reminderNotifications}
-              onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, reminderNotifications: checked }))}
-            />
-          </div>
-
-          <div className="border-t pt-4 mt-4">
-            <h4 className="text-sm font-medium mb-4 flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Forum Notifications
-            </h4>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label htmlFor="notify-replies">Reply Notifications</Label>
-                  <p className="text-sm text-muted-foreground">Get notified when someone replies to your posts</p>
-                </div>
-                <Switch
-                  id="notify-replies"
-                  checked={settings.notifyForumReplies}
-                  onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, notifyForumReplies: checked }))}
-                />
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <ThumbsUp className="h-4 w-4 text-muted-foreground" />
-                    <Label htmlFor="notify-likes">Like Notifications</Label>
-                  </div>
-                  <p className="text-sm text-muted-foreground">Get notified when someone likes your posts</p>
-                </div>
-                <Switch
-                  id="notify-likes"
-                  checked={settings.notifyForumLikes}
-                  onCheckedChange={(checked) => setSettings((prev) => ({ ...prev, notifyForumLikes: checked }))}
-                />
-              </div>
-            </div>
-          </div>
-
-          {settings.reminderNotifications && (
-            <div className="border-t pt-4 mt-4">
-              <div className="space-y-2">
-                <Label htmlFor="notification-time">Reminder Time</Label>
-                <p className="text-sm text-muted-foreground mb-2">When would you like to receive training reminders?</p>
-                <Select
-                  value={settings.dailyNotificationTime}
-                  onValueChange={(value) => setSettings((prev) => ({ ...prev, dailyNotificationTime: value }))}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="07:00">7:00 AM</SelectItem>
-                    <SelectItem value="08:00">8:00 AM</SelectItem>
-                    <SelectItem value="09:00">9:00 AM</SelectItem>
-                    <SelectItem value="12:00">12:00 PM</SelectItem>
-                    <SelectItem value="17:00">5:00 PM</SelectItem>
-                    <SelectItem value="18:00">6:00 PM</SelectItem>
-                    <SelectItem value="19:00">7:00 PM</SelectItem>
-                    <SelectItem value="20:00">8:00 PM</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
           )}
         </CardContent>
       </Card>

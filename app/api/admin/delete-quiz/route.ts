@@ -1,15 +1,19 @@
+import { createClient } from "@/lib/supabase/server"
 import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 
 export async function DELETE(request: Request) {
   try {
-    const { searchParams } = new URL(request.url)
-    const quizId = searchParams.get("id")
-    const userId = request.headers.get("x-user-id")
+    const authClient = await createClient()
+    const { data: { user } } = await authClient.auth.getUser()
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
+
+    const userId = user.id
+    const { searchParams } = new URL(request.url)
+    const quizId = searchParams.get("id")
 
     if (!quizId) {
       return NextResponse.json({ error: "Missing quiz ID" }, { status: 400 })

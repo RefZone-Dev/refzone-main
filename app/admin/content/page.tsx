@@ -166,9 +166,6 @@ export default function ContentManagement() {
         try {
           const response = await fetch(`/api/admin/delete-scenario?id=${id}`, {
             method: "DELETE",
-            headers: {
-              "x-user-id": user.id,
-            },
           })
 
           const result = await response.json()
@@ -262,9 +259,6 @@ export default function ContentManagement() {
         try {
           const response = await fetch(`/api/admin/delete-quiz?id=${id}`, {
             method: "DELETE",
-            headers: {
-              "x-user-id": user.id,
-            },
           })
 
           const result = await response.json()
