@@ -58,7 +58,6 @@ export async function POST(request: Request) {
     }
 
     const userId = user.id
-    }
 
     const supabase = createServiceClient()
 
