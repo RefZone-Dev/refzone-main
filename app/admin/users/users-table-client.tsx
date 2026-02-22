@@ -62,7 +62,6 @@ export function UsersTableClient({ users: initialUsers }: UsersTableClientProps)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterAdmin, setFilterAdmin] = useState<string>('all')
-  const [filterVerified, setFilterVerified] = useState<string>('all')
   const [filterExperience, setFilterExperience] = useState<string>('all')
   const [detailsUserId, setDetailsUserId] = useState<string | null>(null)
   const [editUserId, setEditUserId] = useState<string | null>(null)
@@ -78,15 +77,10 @@ export function UsersTableClient({ users: initialUsers }: UsersTableClientProps)
       (filterAdmin === 'admin' && user.is_admin) ||
       (filterAdmin === 'user' && !user.is_admin)
 
-    const matchesVerified =
-      filterVerified === 'all' ||
-      (filterVerified === 'verified' && user.is_verified) ||
-      (filterVerified === 'unverified' && !user.is_verified)
-
     const matchesExperience =
       filterExperience === 'all' || user.experience_level === filterExperience
 
-    return matchesSearch && matchesAdmin && matchesVerified && matchesExperience
+    return matchesSearch && matchesAdmin && matchesExperience
   })
 
   const handleSelectAll = (checked: boolean) => {
@@ -182,7 +176,7 @@ export function UsersTableClient({ users: initialUsers }: UsersTableClientProps)
           <CardTitle>Filters & Search</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -201,17 +195,6 @@ export function UsersTableClient({ users: initialUsers }: UsersTableClientProps)
                 <SelectItem value="all">All Users</SelectItem>
                 <SelectItem value="admin">Admins Only</SelectItem>
                 <SelectItem value="user">Regular Users</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filterVerified} onValueChange={setFilterVerified}>
-              <SelectTrigger>
-                <SelectValue placeholder="Verification" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                <SelectItem value="verified">Verified</SelectItem>
-                <SelectItem value="unverified">Unverified</SelectItem>
               </SelectContent>
             </Select>
 

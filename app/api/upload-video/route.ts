@@ -56,9 +56,9 @@ export async function POST(request: NextRequest) {
       })
 
     if (chunkError) {
-      console.error('Chunk upload error:', chunkError)
+      console.error('[v0] Chunk upload error:', chunkError)
       return NextResponse.json(
-        { error: 'Failed to upload chunk' },
+        { error: `Failed to upload chunk: ${chunkError.message}` },
         { status: 500 }
       )
     }
@@ -94,6 +94,7 @@ export async function POST(request: NextRequest) {
           })
 
         if (uploadError) {
+          console.error('[v0] Final file upload error:', uploadError)
           throw uploadError
         }
 
@@ -115,9 +116,10 @@ export async function POST(request: NextRequest) {
           path: filePath,
         })
       } catch (assembleError) {
-        console.error('File assembly error:', assembleError)
+        console.error('[v0] File assembly error:', assembleError)
+        const errorMsg = assembleError instanceof Error ? assembleError.message : 'Failed to assemble file'
         return NextResponse.json(
-          { error: 'Failed to assemble file' },
+          { error: `Assembly failed: ${errorMsg}` },
           { status: 500 }
         )
       }
@@ -131,9 +133,11 @@ export async function POST(request: NextRequest) {
       progress: Math.round(((chunkIndex + 1) / totalChunks) * 100),
     })
   } catch (error) {
-    console.error('Upload error:', error)
+    console.error('[v0] Upload error:', error)
+    const errorMsg = error instanceof Error ? error.message : 'Upload failed'
+    console.error('[v0] Error details:', errorMsg)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Upload failed' },
+      { error: `Upload failed: ${errorMsg}` },
       { status: 500 }
     )
   }

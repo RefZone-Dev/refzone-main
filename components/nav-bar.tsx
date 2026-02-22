@@ -115,7 +115,10 @@ export function NavBar() {
     </Dialog>
   )
 
-  const mainNavItems = [{ href: "/dashboard", label: "Dashboard", icon: LayoutDashboard }]
+  const mainNavItems = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/decision-lab", label: "Decision Lab", icon: Users },
+  ]
 
   const socialNavItems: { href: string; label: string; icon: any; tutorialId?: string }[] = []
 
