@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     console.log("[v0] Calling generateText with", conversationMessages.length, "messages")
 
     const { text } = await generateText({
-      model: "deepseek/deepseek-chat",
+      model: "groq/llama-3.3-70b-versatile",
       messages: conversationMessages,
       maxOutputTokens: 500,
     })

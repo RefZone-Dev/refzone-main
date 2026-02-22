@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     const lawsDocument = configData?.config_value || ""
 
     const { text } = await generateText({
-      model: "deepseek/deepseek-chat",
+      model: "groq/llama-3.3-70b-versatile",
       system: lawsDocument
         ? `You are a football referee instructor creating a focused quiz. Reference this Laws of the Game document:\n\n${lawsDocument}`
         : "You are a football referee instructor with comprehensive knowledge of IFAB Laws of the Game 2025/26.",

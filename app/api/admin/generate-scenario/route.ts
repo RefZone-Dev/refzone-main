@@ -95,7 +95,7 @@ export async function POST(request: Request) {
     }
 
     const { text } = await generateText({
-      model: "deepseek/deepseek-chat",
+      model: "groq/llama-3.3-70b-versatile",
       system: lawsDocument
         ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
         : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",

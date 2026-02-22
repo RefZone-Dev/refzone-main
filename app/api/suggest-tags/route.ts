@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { text } = await generateText({
-      model: "deepseek/deepseek-chat",
+      model: "groq/llama-3.3-70b-versatile",
       prompt: `You are an expert football/soccer referee analyzing a scenario answer to categorize it by law.
 
 Given the following referee scenario answer, suggest the most relevant law category and specific law section:
