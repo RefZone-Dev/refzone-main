@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
+// Middleware to handle session refresh and route protection
 // Public routes (always accessible without auth)
 const PUBLIC_ROUTES = [
   "/auth/login",
