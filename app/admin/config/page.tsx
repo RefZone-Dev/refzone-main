@@ -115,9 +115,6 @@ export default function AdminConfigPage() {
     try {
       const response = await fetch("/api/admin/generate-scenario", {
         method: "POST",
-        headers: {
-          "x-user-id": userId || "",
-        },
       })
 
       const result = await response.json()
@@ -144,9 +141,6 @@ export default function AdminConfigPage() {
     try {
       const response = await fetch("/api/admin/generate-quiz", {
         method: "POST",
-        headers: {
-          "x-user-id": userId || "",
-        },
       })
 
       const result = await response.json()

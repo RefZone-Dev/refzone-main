@@ -18,22 +18,13 @@ export async function POST() {
     const userId = user.id
 
     // Delete user data from application tables
-    await supabase.from("notifications").delete().eq("user_id", userId)
-    await supabase.from("friendships").delete().or(`requester_id.eq.${userId},addressee_id.eq.${userId}`)
-    await supabase.from("forum_votes").delete().eq("user_id", userId)
-
-    // This keeps the content but shows "Deleted User" as the author
-    await supabase.from("forum_replies").update({ user_id: null }).eq("user_id", userId)
-    await supabase.from("forum_posts").update({ user_id: null }).eq("user_id", userId)
-
-    await supabase.from("user_achievements").delete().eq("user_id", userId)
+    await supabase.from("user_seen_important_notifications").delete().eq("user_id", userId)
     await supabase.from("user_feedback").delete().eq("user_id", userId)
-    await supabase.from("user_inventory").delete().eq("user_id", userId)
-    await supabase.from("user_customization").delete().eq("user_id", userId)
+    await supabase.from("user_achievements").delete().eq("user_id", userId)
+    await supabase.from("quiz_answers").delete().eq("user_id", userId)
     await supabase.from("quiz_attempts").delete().eq("user_id", userId)
     await supabase.from("scenario_responses").delete().eq("user_id", userId)
-    await supabase.from("match_reports").delete().eq("user_id", userId)
-    await supabase.from("points_transactions").delete().eq("user_id", userId)
+    await supabase.from("reports").delete().eq("user_id", userId)
     await supabase.from("profiles").delete().eq("id", userId)
 
     // Sign out the user first
