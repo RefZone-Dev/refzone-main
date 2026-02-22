@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Upload, Loader2, CheckCircle2, XCircle, Sparkles } from "lucide-react"
+import { upload } from "@vercel/blob/client"
 
 export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
   const [videoFile, setVideoFile] = useState<File | null>(null)
@@ -61,23 +62,15 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
     setError("")
 
     try {
-      // Stream the file directly to the API route which pipes it to Vercel Blob
-      const response = await fetch('/api/upload-video', {
-        method: 'POST',
-        headers: {
-          'content-type': videoFile.type || 'video/mp4',
-          'x-vercel-filename': videoFile.name,
-        },
-        body: videoFile,
+      // Client-side upload: goes directly from browser to Vercel Blob
+      // The API route only handles token generation, not the file bytes
+      const blob = await upload(videoFile.name, videoFile, {
+        access: 'public',
+        handleUploadUrl: '/api/upload-video',
+        multipart: true,
       })
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: 'Upload failed' }))
-        throw new Error(errorData.error || `Upload failed with status ${response.status}`)
-      }
-
-      const result = await response.json()
-      setVideoUrl(result.url)
+      setVideoUrl(blob.url)
       setUploadProgress(100)
     } catch (err) {
       console.error("Video upload error:", err)
