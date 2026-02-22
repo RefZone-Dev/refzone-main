@@ -1,9 +1,10 @@
-import { createGroq } from "@ai-sdk/groq"
+import { createOpenAI } from "@ai-sdk/openai"
 import { generateText } from "ai"
 import { NextRequest, NextResponse } from 'next/server'
 
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY,
+const deepseek = createOpenAI({
+  apiKey: "sk-29fe8c9737fc4dde86e97d1621d24586",
+  baseURL: "https://api.deepseek.com/v1",
 })
 
 export async function POST(request: NextRequest) {
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { text } = await generateText({
-      model: groq("llama-3.3-70b-versatile"),
+      model: deepseek("deepseek-chat"),
       prompt: `You are an expert football/soccer referee analyzing a scenario answer to categorize it by law.
 
 Given the following referee scenario answer, suggest the most relevant law category and specific law section:

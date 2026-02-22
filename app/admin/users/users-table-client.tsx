@@ -33,20 +33,16 @@ import { useRouter } from 'next/navigation'
 import { BulkActionsToolbar } from '@/components/admin/bulk-actions-toolbar'
 import { UserDetailsModal } from '@/components/admin/user-details-modal'
 import { UserEditModal } from '@/components/admin/user-edit-modal'
-import { VerifiedBadge } from '@/components/verified-badge'
 
 interface User {
   id: string
   display_name: string
   email: string
-  phone: string | null
-  phone_verified: boolean
-  date_of_birth: string | null
   experience_level: string
   is_admin: boolean
-  is_verified: boolean
   total_points: number
-  streak_count: number
+  current_streak: number
+  has_set_username: boolean
   created_at: string
   last_sign_in: string | null
   email_confirmed: boolean
@@ -69,8 +65,7 @@ export function UsersTableClient({ users: initialUsers }: UsersTableClientProps)
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.display_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.phone?.includes(searchTerm)
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesAdmin =
       filterAdmin === 'all' ||
@@ -145,18 +140,6 @@ export function UsersTableClient({ users: initialUsers }: UsersTableClientProps)
     setSelectedIds([])
   }
 
-  const calculateAge = (dob: string | null) => {
-    if (!dob) return 'N/A'
-    const birthDate = new Date(dob)
-    const today = new Date()
-    let age = today.getFullYear() - birthDate.getFullYear()
-    const monthDiff = today.getMonth() - birthDate.getMonth()
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--
-    }
-    return age
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -180,7 +163,7 @@ export function UsersTableClient({ users: initialUsers }: UsersTableClientProps)
             <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name, email, or phone..."
+                placeholder="Search by name or email..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -237,8 +220,6 @@ export function UsersTableClient({ users: initialUsers }: UsersTableClientProps)
                   </TableHead>
                   <TableHead>User</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Age</TableHead>
                   <TableHead>Level</TableHead>
                   <TableHead>Points</TableHead>
                   <TableHead>Streak</TableHead>
@@ -258,10 +239,7 @@ export function UsersTableClient({ users: initialUsers }: UsersTableClientProps)
                       />
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{user.display_name || 'N/A'}</span>
-                        {user.is_verified && <VerifiedBadge />}
-                      </div>
+                      <span className="font-medium">{user.display_name || 'N/A'}</span>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -274,31 +252,13 @@ export function UsersTableClient({ users: initialUsers }: UsersTableClientProps)
                       </div>
                     </TableCell>
                     <TableCell>
-                      {user.phone ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{user.phone}</span>
-                          {user.phone_verified ? (
-                            <CheckCircle2 className="h-3 w-3 text-green-500" />
-                          ) : (
-                            <XCircle className="h-3 w-3 text-red-500" />
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">N/A</span>
-                      )}
-                    </TableCell>
-                    <TableCell>{calculateAge(user.date_of_birth)}</TableCell>
-                    <TableCell>
                       <Badge variant="outline" className="capitalize">
-                        {user.experience_level}
+                        {user.experience_level || 'none'}
                       </Badge>
                     </TableCell>
                     <TableCell className="font-semibold">{user.total_points || 0}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
-                        <span className="font-semibold">{user.streak_count || 0}</span>
-                        <span className="text-orange-500">🔥</span>
-                      </div>
+                      <span className="font-semibold">{user.current_streak || 0}</span>
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">

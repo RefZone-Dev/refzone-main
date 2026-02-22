@@ -20,14 +20,10 @@ export function UserEditModal({ userId, open, onOpenChange, onUpdate }: UserEdit
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     display_name: '',
-    email: '',
-    phone: '',
-    date_of_birth: '',
     experience_level: 'none',
     is_admin: false,
-    is_verified: false,
     total_points: 0,
-    streak_count: 0,
+    current_streak: 0,
   })
 
   useEffect(() => {
@@ -39,17 +35,17 @@ export function UserEditModal({ userId, open, onOpenChange, onUpdate }: UserEdit
   const fetchUserData = async () => {
     try {
       const res = await fetch(`/api/admin/users/${userId}`)
+      if (!res.ok) {
+        toast.error('Failed to load user data')
+        return
+      }
       const data = await res.json()
       setFormData({
         display_name: data.display_name || '',
-        email: data.email || '',
-        phone: data.phone || '',
-        date_of_birth: data.date_of_birth || '',
         experience_level: data.experience_level || 'none',
         is_admin: data.is_admin || false,
-        is_verified: data.is_verified || false,
         total_points: data.total_points || 0,
-        streak_count: data.streak_count || 0,
+        current_streak: data.current_streak || 0,
       })
     } catch (error) {
       console.error('Failed to fetch user data:', error)
@@ -86,48 +82,18 @@ export function UserEditModal({ userId, open, onOpenChange, onUpdate }: UserEdit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Edit User</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-4 py-4">
-          <div className="space-y-2">
+          <div className="space-y-2 col-span-2">
             <Label htmlFor="display_name">Display Name</Label>
             <Input
               id="display_name"
               value={formData.display_name}
               onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              disabled
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
-            <Input
-              id="phone"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="date_of_birth">Date of Birth</Label>
-            <Input
-              id="date_of_birth"
-              type="date"
-              value={formData.date_of_birth}
-              onChange={(e) => setFormData({ ...formData, date_of_birth: e.target.value })}
             />
           </div>
 
@@ -161,33 +127,22 @@ export function UserEditModal({ userId, open, onOpenChange, onUpdate }: UserEdit
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="streak_count">Streak Count</Label>
+            <Label htmlFor="current_streak">Current Streak</Label>
             <Input
-              id="streak_count"
+              id="current_streak"
               type="number"
-              value={formData.streak_count}
-              onChange={(e) => setFormData({ ...formData, streak_count: Number(e.target.value) })}
+              value={formData.current_streak}
+              onChange={(e) => setFormData({ ...formData, current_streak: Number(e.target.value) })}
             />
           </div>
 
-          <div className="flex items-center justify-between space-x-2 col-span-2">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="is_admin"
-                checked={formData.is_admin}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_admin: checked })}
-              />
-              <Label htmlFor="is_admin">Admin Status</Label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="is_verified"
-                checked={formData.is_verified}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_verified: checked })}
-              />
-              <Label htmlFor="is_verified">Verified Status</Label>
-            </div>
+          <div className="flex items-center space-x-2 col-span-2">
+            <Switch
+              id="is_admin"
+              checked={formData.is_admin}
+              onCheckedChange={(checked) => setFormData({ ...formData, is_admin: checked })}
+            />
+            <Label htmlFor="is_admin">Admin Status</Label>
           </div>
         </div>
 

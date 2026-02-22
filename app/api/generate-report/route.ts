@@ -1,26 +1,22 @@
-import { createGroq } from "@ai-sdk/groq"
-import { streamText } from "ai"
+import { createOpenAI } from "@ai-sdk/openai"
+import { generateText } from "ai"
 
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY,
+const deepseek = createOpenAI({
+  apiKey: "sk-29fe8c9737fc4dde86e97d1621d24586",
+  baseURL: "https://api.deepseek.com/v1",
 })
 
 export async function POST(req: Request) {
   try {
     const { prompt } = await req.json()
 
-    const result = streamText({
-      model: groq("llama-3.3-70b-versatile"), // Replaced openai/gpt-4o with Groq model
+    const { text } = await generateText({
+      model: deepseek("deepseek-chat"),
       prompt,
-      maxOutputTokens: 500,
+      maxTokens: 500,
     })
 
-    let fullText = ""
-    for await (const chunk of result.textStream) {
-      fullText += chunk
-    }
-
-    return Response.json({ report: fullText })
+    return Response.json({ report: text })
   } catch (error) {
     console.error("[v0] Error generating report:", error)
     return Response.json({ error: "Failed to generate report" }, { status: 500 })
