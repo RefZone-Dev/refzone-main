@@ -76,7 +76,7 @@ export async function POST(request: Request) {
         system: lawsDocument
           ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
           : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",
-        maxTokens: 4000,
+        maxOutputTokens: 4000,
         temperature: 0.7,
         prompt: `${quizPrompt}${existingQuizzesRef}
 
