@@ -185,6 +185,8 @@ ${quantity > 1 ? `{
     try {
       quizData = JSON.parse(cleanedText)
       console.log("[v0] Successfully parsed JSON")
+      console.log("[v0] Parsed quiz data keys:", Object.keys(quizData))
+      console.log("[v0] Full parsed data:", JSON.stringify(quizData, null, 2))
     } catch (parseError) {
       console.error("[v0] JSON parse error:", parseError)
       console.error("[v0] Full cleaned text:", cleanedText)
@@ -197,11 +199,34 @@ ${quantity > 1 ? `{
       )
     }
     
+    // Validate the parsed data
+    if (!quizData) {
+      console.error("[v0] Quiz data is null or undefined")
+      return NextResponse.json(
+        {
+          error: "Generation failed",
+          details: "AI returned empty data. Please try again.",
+        },
+        { status: 500 },
+      )
+    }
+    
     // Handle both single quiz and multiple quizzes format
     const quizzesToProcess = quizData.quizzes ? quizData.quizzes : [quizData]
     
     console.log("[v0] Number of quizzes to process:", quizzesToProcess.length)
-    console.log("[v0] First quiz structure:", JSON.stringify(quizzesToProcess[0], null, 2))
+    if (quizzesToProcess.length > 0) {
+      console.log("[v0] First quiz structure:", JSON.stringify(quizzesToProcess[0], null, 2))
+    } else {
+      console.error("[v0] No quizzes found in processed data!")
+      return NextResponse.json(
+        {
+          error: "Generation failed",
+          details: "AI did not return any quizzes. Please try again.",
+        },
+        { status: 500 },
+      )
+    }
     
     const createdQuizzes = []
     let totalQuestions = 0
