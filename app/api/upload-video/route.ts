@@ -1,46 +1,41 @@
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client'
-import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
-  const body = (await request.json()) as HandleUploadBody
-
   try {
+    const body = (await request.json()) as HandleUploadBody
+
     const jsonResponse = await handleUpload({
       body,
       request,
-      onBeforeGenerateToken: async () => {
-        // Verify admin access before allowing upload
-        const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
-
-        if (!user) {
-          throw new Error('Unauthorized')
-        }
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', user.id)
-          .single()
-
-        if (!profile?.is_admin) {
-          throw new Error('Admin access required')
-        }
-
+      onBeforeGenerateToken: async (pathname) => {
+        // Allow video uploads with size limit of 500MB
         return {
-          allowedContentTypes: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo', 'video/mpeg', 'video/ogg', 'video/x-matroska'],
+          allowedContentTypes: [
+            'video/mp4',
+            'video/webm',
+            'video/quicktime',
+            'video/x-msvideo',
+            'video/mpeg',
+            'video/ogg',
+            'video/x-matroska',
+          ],
           maximumSizeInBytes: 500 * 1024 * 1024, // 500MB
+          tokenPayload: JSON.stringify({
+            pathname,
+          }),
         }
       },
       onUploadCompleted: async ({ blob }) => {
-        console.log('[v0] Video upload completed:', blob.url)
+        // This callback is called after the upload is complete
+        // It runs on the server after Vercel Blob notifies us
+        console.log('Video upload completed:', blob.url)
       },
     })
 
     return NextResponse.json(jsonResponse)
   } catch (error) {
-    console.error('[v0] Upload error:', error)
+    console.error('Upload error:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Upload failed' },
       { status: 400 },
