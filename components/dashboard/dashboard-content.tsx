@@ -4,14 +4,11 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import Link from "next/link"
-import { Target, TrendingUp, MessageSquare, Flame, Zap, Award, Flag as Flask, BookOpen, Clock, Star, Heart, Shield, FileText, TrendingDown, AlertCircle, Loader2 } from "lucide-react"
+import { Target, TrendingUp, Flame, Award, Flag as Flask, BookOpen, Star, TrendingDown, Loader2 } from "lucide-react"
 import { DashboardWrapper } from "./dashboard-wrapper"
 import { PerformanceChart } from "./performance-chart"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
-import { GoalSettingModal } from "@/components/dashboard/goal-setting-modal"
 import { useTutorial } from "@/components/tutorial/tutorial-context"
 
 interface DashboardContentProps {
@@ -26,14 +23,6 @@ interface DashboardContentProps {
   totalQuizzes: number
 }
 
-const forumCategories = [
-  { value: "all", label: "All Categories" },
-  { value: "general", label: "General" },
-  { value: "rules", label: "Rules Discussion" },
-  { value: "scenarios", label: "Scenarios" },
-  { value: "training", label: "Training Tips" },
-]
-
 export function DashboardContent({
   profile,
   todayActivity,
@@ -45,12 +34,6 @@ export function DashboardContent({
   totalScenarios,
   totalQuizzes,
 }: DashboardContentProps) {
-  const [showGoalModal, setShowGoalModal] = useState(false)
-  const [selectedCategory, setSelectedCategory] = useState("all")
-  const [goals, setGoals] = useState<{ scenarios: number | null; quizzes: number | null }>({
-    scenarios: profile.has_set_goals ? profile.daily_scenario_goal : null,
-    quizzes: profile.has_set_goals ? profile.daily_quiz_goal : null,
-  })
   const [availableQuizzes, setAvailableQuizzes] = useState<any[]>([])
   const [userQuizAttempts, setUserQuizAttempts] = useState<string[]>([])
   const [generatingQuiz, setGeneratingQuiz] = useState<string | null>(null)
@@ -241,52 +224,12 @@ export function DashboardContent({
     })
   }, [isTutorialActive, weakAreas, availableQuizzes, userQuizAttempts, generatedQuizMap])
 
-  const handleVote = async (postId: string, voteType: number) => {
-    const supabase = createClient()
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) return
-    const user = session.user
-
-    const { data: existingVote } = await supabase
-      .from("forum_votes")
-      .select("*")
-      .eq("post_id", postId)
-      .eq("user_id", user.id)
-      .single()
-
-    if (existingVote) {
-      if (existingVote.vote_type === voteType) {
-        await supabase.from("forum_votes").delete().eq("id", existingVote.id)
-      } else {
-        await supabase.from("forum_votes").update({ vote_type: voteType }).eq("id", existingVote.id)
-      }
-    } else {
-      await supabase.from("forum_votes").insert({
-        post_id: postId,
-        user_id: user.id,
-        vote_type: voteType,
-      })
-    }
-  }
-
-  const handleGoalSet = (scenarioGoal: number | null, quizGoal: number | null) => {
-    setGoals({ scenarios: scenarioGoal, quizzes: quizGoal })
-  }
-
   return (
     <DashboardWrapper
-      hasSetGoals={profile.has_set_goals || false}
-      currentScenarioGoal={profile.daily_scenario_goal || 0}
-      currentQuizGoal={profile.daily_quiz_goal || 0}
+      hasSetGoals={false}
+      currentScenarioGoal={0}
+      currentQuizGoal={0}
     >
-      <GoalSettingModal
-        isOpen={showGoalModal}
-        onClose={() => setShowGoalModal(false)}
-        onGoalSet={handleGoalSet}
-        currentScenarioGoal={goals.scenarios}
-        currentQuizGoal={goals.quizzes}
-        isEditing={true}
-      />
 
       <div className="space-y-6 pb-8">
         {/* Welcome */}
@@ -297,8 +240,8 @@ export function DashboardContent({
           <p className="text-muted-foreground">Ready to sharpen your skills today?</p>
         </div>
 
-        {/* Row 1: 4 CTA Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Row 1: 3 CTA Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Scenario CTA with Streak */}
           <Link href="/scenarios" data-tutorial="scenarios" className="block">
             <Card className="border-2 hover:border-primary/50 transition-all hover:shadow-lg group cursor-pointer h-full">
@@ -333,21 +276,6 @@ export function DashboardContent({
             </Card>
           </Link>
 
-          {/* Match Report CTA */}
-          <Link href="/match-reports" data-tutorial="match-reports" className="block">
-            <Card className="border-2 hover:border-green-500/50 transition-all hover:shadow-lg group cursor-pointer h-full">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <FileText className="h-6 w-6 text-green-500" />
-                  </div>
-                </div>
-                <h3 className="font-semibold text-foreground mb-1">Match Reports</h3>
-                <p className="text-sm text-muted-foreground">Build reports</p>
-              </CardContent>
-            </Card>
-          </Link>
-
           {/* DecisionLab CTA */}
           <Link href="/decision-lab" data-tutorial="decision-lab" className="block">
             <Card className="border-2 hover:border-purple-500/50 transition-all hover:shadow-lg group cursor-pointer h-full">
@@ -364,148 +292,7 @@ export function DashboardContent({
           </Link>
         </div>
 
-        {/* Row 2: Daily Goal Progress + Daily Activity Streak */}
-        <Card className="border-2 bg-gradient-to-r from-primary/5 to-blue-500/5" data-tutorial="daily-progress">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">{"Today's Progress"}</CardTitle>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10">
-                  <Flame className="h-4 w-4 text-orange-500" />
-                  <span className="font-semibold text-sm">{profile.current_streak || 0} day streak</span>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => setShowGoalModal(true)}>
-                  <Zap className="h-4 w-4 mr-1" />
-                  {hasGoalSet ? "Change Goal" : "Set Goal"}
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {hasGoalSet ? (
-              <>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Scenarios</span>
-                      <span className="font-medium">
-                        {scenariosCompleted} / {goals.scenarios}
-                      </span>
-                    </div>
-                    <Progress value={scenarioProgress} className="h-2" />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Quizzes</span>
-                      <span className="font-medium">
-                        {quizzesCompleted} / {goals.quizzes}
-                      </span>
-                    </div>
-                    <Progress value={quizProgress} className="h-2" />
-                  </div>
-                </div>
-                <div className="flex items-center justify-between pt-2">
-                  <span className="text-sm text-muted-foreground">Overall progress</span>
-                  <span className="text-sm font-semibold">{Math.round(overallProgress)}%</span>
-                </div>
-                <Progress value={overallProgress} className="h-3" />
-              </>
-            ) : (
-              <div className="flex items-center gap-3 p-4 rounded-lg bg-muted/50">
-                <AlertCircle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
-                <div>
-                  <p className="font-medium text-foreground">Daily training goal not set</p>
-                  <p className="text-sm text-muted-foreground">
-                    Set a daily goal to track your progress and build consistency.
-                  </p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Row 3: Forum Posts */}
-        <Card className="border-2" data-tutorial="forum-section">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3">
-                <MessageSquare className="h-5 w-5 text-blue-500" />
-                <CardTitle className="text-lg">Latest Forum Activity</CardTitle>
-              </div>
-              <div className="flex items-center gap-2">
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {forumCategories.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/forum">View All</Link>
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {filteredPosts.length > 0 ? (
-              <div className="space-y-4">
-                {filteredPosts.slice(0, 3).map((post) => {
-                  const votes = post.forum_votes || []
-                  const upvotes = votes.filter((v: any) => v.vote_type === 1).length
-                  const downvotes = votes.filter((v: any) => v.vote_type === -1).length
-                  const replyCount = post.forum_replies?.length || 0
-
-                  return (
-                    <div
-                      key={post.id}
-                      className="flex items-start gap-4 p-4 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <Link href={`/forum/${post.id}`} className="hover:underline">
-                          <h4 className="font-medium text-foreground truncate">{post.title}</h4>
-                        </Link>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                          <span>{post.profiles?.display_name || "Anonymous"}</span>
-                          <Badge variant="outline" className="text-xs">
-                            {post.category}
-                          </Badge>
-                          <span>{replyCount} replies</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => handleVote(post.id, 1)}>
-                          <Heart className="h-4 w-4 mr-1" />
-                          {upvotes}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => handleVote(post.id, -1)}>
-                          <Shield className="h-4 w-4 mr-1" />
-                          {downvotes}
-                        </Button>
-                        <Button variant="outline" size="sm" className="h-8 bg-transparent" asChild>
-                          <Link href={`/forum/${post.id}`}>
-                            <MessageSquare className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="text-center text-muted-foreground py-8">No posts in this category yet.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Row 4: Recommendations & Performance Stats */}
+        {/* Row 2: Recommendations & Performance Stats */}
         <div className="grid md:grid-cols-2 gap-6">
           {/* Recommendations & Insights */}
           <Card className="border-2" data-tutorial="insights-section">
