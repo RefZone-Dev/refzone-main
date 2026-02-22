@@ -112,18 +112,7 @@ export function DashboardContent({
     fetchQuizzes()
   }, [])
 
-  const hasGoalSet = goals.scenarios !== null && goals.quizzes !== null
-
-  const scenariosCompleted = todayActivity?.scenarios_completed ?? 0
-  const quizzesCompleted = todayActivity?.quizzes_completed ?? 0
-  const scenarioProgress =
-    hasGoalSet && goals.scenarios! > 0 ? Math.min(100, (scenariosCompleted / goals.scenarios!) * 100) : 0
-  const quizProgress = hasGoalSet && goals.quizzes! > 0 ? Math.min(100, (quizzesCompleted / goals.quizzes!) * 100) : 0
-  const overallProgress = hasGoalSet ? (scenarioProgress + quizProgress) / 2 : 0
-
-  const safeForumPosts = Array.isArray(forumPosts) ? forumPosts : []
-  const filteredPosts =
-    selectedCategory === "all" ? safeForumPosts : safeForumPosts.filter((p) => p.category === selectedCategory)
+  // Forum and goals features removed - keeping interface props for now to avoid breaking changes
 
   // Find quizzes related to a weakness area
   const findRelatedQuizzes = (lawCategory: string, lawSection?: string) => {
