@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { Suspense } from "react"
+import { Suspense, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -25,6 +25,20 @@ function LoginContent() {
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get("redirectTo") || "/dashboard"
 
+  useEffect(() => {
+    console.log("[v0] LoginContent mounted")
+    console.log("[v0] Environment check:", {
+      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    })
+    try {
+      const supabase = createClient()
+      console.log("[v0] Supabase client created successfully")
+    } catch (error) {
+      console.error("[v0] Failed to create Supabase client:", error)
+    }
+  }, [])
+
   const getRedirectUrl = () => {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "")
     return `${baseUrl}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`
@@ -32,6 +46,7 @@ function LoginContent() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log("[v0] Login form submitted")
     setIsLoading(true)
     setError(null)
     setEmailNotConfirmed(false)
@@ -50,13 +65,16 @@ function LoginContent() {
     }
 
     try {
+      console.log("[v0] Creating Supabase client")
       const supabase = createClient()
+      console.log("[v0] Attempting sign in with password")
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) {
+        console.log("[v0] Sign in error:", error)
         setIsLoading(false)
         if (error.message.includes("Email not confirmed") || error.message.includes("email_not_confirmed")) {
           setEmailNotConfirmed(true)
@@ -70,8 +88,10 @@ function LoginContent() {
       }
 
       // Keep loading state true while redirecting
+      console.log("[v0] Sign in successful, redirecting to:", redirectTo)
       router.push(redirectTo)
     } catch (error: unknown) {
+      console.log("[v0] Catch block error:", error)
       const errorMessage = error instanceof Error ? error.message : "An error occurred"
       setError(errorMessage)
       setIsLoading(false)
