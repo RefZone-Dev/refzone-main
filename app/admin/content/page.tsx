@@ -460,7 +460,9 @@ export default function ContentManagement() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{modal.title}</DialogTitle>
-            <DialogDescription>{modal.message}</DialogDescription>
+            <DialogDescription className="whitespace-pre-wrap max-h-96 overflow-y-auto">
+              {modal.message}
+            </DialogDescription>
           </DialogHeader>
           {modal.type === "confirm" && (
             <DialogFooter>
