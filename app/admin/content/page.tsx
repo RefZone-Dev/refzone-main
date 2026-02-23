@@ -395,7 +395,10 @@ export default function ContentManagement() {
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to generate quiz")
+        const errorMessage = result.details 
+          ? `${result.error}\n\nDetails:\n${result.details}` 
+          : (result.error || "Failed to generate quiz")
+        throw new Error(errorMessage)
       }
 
       // Refresh quizzes list
