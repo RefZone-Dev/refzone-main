@@ -275,8 +275,6 @@ ${quantity > 1 ? `{
         explanation: q.explanation,
         points_value: q.points_value || q.points || 5,
         order_index: index,
-        law_category: q.law_category || null,
-        law_section: q.law_section || null,
       }))
 
       console.log("[v0] Inserting", questionsToInsert.length, "questions for quiz", newQuiz.id)
