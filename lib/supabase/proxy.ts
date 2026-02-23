@@ -81,12 +81,17 @@ export async function updateSession(request: NextRequest) {
   // Allow public routes without auth
   if (PUBLIC_ROUTES.some(route => pathname.startsWith(route))) {
     // If user is logged in and on login/signup pages, redirect to dashboard
+    // But only if the session is valid (not expired)
     if (user && (pathname.startsWith("/auth/login") || pathname.startsWith("/auth/sign-up"))) {
-      const url = request.nextUrl.clone()
-      const redirectTo = request.nextUrl.searchParams.get("redirectTo")
-      url.pathname = redirectTo || "/dashboard"
-      url.searchParams.delete("redirectTo")
-      return NextResponse.redirect(url)
+      // Verify the session is actually valid by checking the user object
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        const url = request.nextUrl.clone()
+        const redirectTo = request.nextUrl.searchParams.get("redirectTo")
+        url.pathname = redirectTo || "/dashboard"
+        url.searchParams.delete("redirectTo")
+        return NextResponse.redirect(url)
+      }
     }
     return supabaseResponse
   }
