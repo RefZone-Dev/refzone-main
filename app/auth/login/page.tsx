@@ -57,6 +57,7 @@ function LoginContent() {
       })
 
       if (error) {
+        setIsLoading(false)
         if (error.message.includes("Email not confirmed") || error.message.includes("email_not_confirmed")) {
           setEmailNotConfirmed(true)
           setError("Your email address has not been confirmed yet.")
@@ -68,11 +69,11 @@ function LoginContent() {
         return
       }
 
+      // Keep loading state true while redirecting
       router.push(redirectTo)
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "An error occurred"
       setError(errorMessage)
-    } finally {
       setIsLoading(false)
     }
   }
@@ -103,10 +104,6 @@ function LoginContent() {
     } finally {
       setResendingEmail(false)
     }
-  }
-
-  if (isLoading) {
-    return <PageLoader message="Signing in" />
   }
 
   return (
