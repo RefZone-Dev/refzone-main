@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useEffect } from "react"
+import { Suspense } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,7 +12,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
 import { Mail, AlertCircle } from "lucide-react"
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -24,20 +24,6 @@ export default function LoginPage() {
   const searchParams = useSearchParams()
   const redirectTo = searchParams.get("redirectTo") || "/dashboard"
 
-  useEffect(() => {
-    console.log("[v0] LoginContent mounted")
-    console.log("[v0] Environment check:", {
-      hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
-      hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    })
-    try {
-      const supabase = createClient()
-      console.log("[v0] Supabase client created successfully")
-    } catch (error) {
-      console.error("[v0] Failed to create Supabase client:", error)
-    }
-  }, [])
-
   const getRedirectUrl = () => {
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "")
     return `${baseUrl}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`
@@ -45,7 +31,6 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log("[v0] Login form submitted")
     setIsLoading(true)
     setError(null)
     setEmailNotConfirmed(false)
@@ -64,16 +49,13 @@ export default function LoginPage() {
     }
 
     try {
-      console.log("[v0] Creating Supabase client")
       const supabase = createClient()
-      console.log("[v0] Attempting sign in with password")
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) {
-        console.log("[v0] Sign in error:", error)
         setIsLoading(false)
         if (error.message.includes("Email not confirmed") || error.message.includes("email_not_confirmed")) {
           setEmailNotConfirmed(true)
@@ -86,11 +68,8 @@ export default function LoginPage() {
         return
       }
 
-      // Keep loading state true while redirecting
-      console.log("[v0] Sign in successful, redirecting to:", redirectTo)
       router.push(redirectTo)
     } catch (error: unknown) {
-      console.log("[v0] Catch block error:", error)
       const errorMessage = error instanceof Error ? error.message : "An error occurred"
       setError(errorMessage)
       setIsLoading(false)
@@ -241,5 +220,51 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen w-full items-center justify-center p-6 bg-gradient-to-br from-blue-50 via-white to-green-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+          <div className="w-full max-w-md">
+            <div className="mb-8 text-center">
+              <h1 className="text-4xl font-bold mb-2">
+                <span className="bg-gradient-to-r from-[#9114af] to-[#ff5eb8] bg-clip-text text-transparent">R</span>
+                <span className="text-gray-900 dark:text-white">efZone</span>
+                <span className="text-xs align-super text-gray-500 ml-0.5">&#174;</span>
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">Train like a pro referee</p>
+            </div>
+            <Card className="border-2 shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-2xl">Welcome Back</CardTitle>
+                <CardDescription>Sign in to continue your training journey</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-6">
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" placeholder="referee@example.com" disabled />
+                  </div>
+                  <div className="grid gap-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Password</Label>
+                    </div>
+                    <Input id="password" type="password" disabled />
+                  </div>
+                  <Button className="w-full" disabled>
+                    Sign In
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   )
 }
