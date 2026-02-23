@@ -1,19 +1,18 @@
 "use client"
 
 import type React from "react"
-import { Suspense, useEffect } from "react"
+import { useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { PageLoader } from "@/components/ui/page-loader"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState } from "react"
 import { Mail, AlertCircle } from "lucide-react"
 
-function LoginContent() {
+export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -242,13 +241,5 @@ function LoginContent() {
         </Card>
       </div>
     </div>
-  )
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={<PageLoader message="Loading login..." />}>
-      <LoginContent />
-    </Suspense>
   )
 }
