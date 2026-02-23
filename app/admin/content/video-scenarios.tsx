@@ -132,13 +132,29 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
 
     try {
       const supabase = createClient()
+      
+      // Ensure we have valid text for required fields
+      const answerText = answer.trim() || "No answer provided"
+      const scenarioTitle = `Scenario #${nextNumber}`
+
+      console.log("[v0] Saving scenario with data:", {
+        title: scenarioTitle,
+        description: answerText,
+        video_url: videoUrl,
+        correct_decision: answerText,
+        explanation: answerText,
+        law_category: suggestedLawCategory || null,
+        law_section: suggestedLawSection || null,
+        scenario_type: suggestedScenarioType,
+        difficulty: suggestedDifficulty,
+      })
 
       const { error: insertError } = await supabase.from("scenarios").insert({
-        title: `Scenario #${nextNumber}`,
-        description: answer.trim(), // Using answer as description
+        title: scenarioTitle,
+        description: answerText,
         video_url: videoUrl,
-        correct_decision: answer.trim(), // Using answer as correct decision
-        explanation: answer.trim(), // Using answer as explanation
+        correct_decision: answerText,
+        explanation: answerText,
         law_category: suggestedLawCategory || null,
         law_section: suggestedLawSection || null,
         scenario_type: suggestedScenarioType,
