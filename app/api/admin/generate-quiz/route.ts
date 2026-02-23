@@ -230,13 +230,16 @@ ${quantity > 1 ? `{
     
     const createdQuizzes = []
     let totalQuestions = 0
+    const skippedQuizzes: string[] = []
 
     for (const quiz of quizzesToProcess) {
       console.log("[v0] Processing quiz:", quiz.title)
       console.log("[v0] Quiz has questions:", quiz.questions?.length || 0)
       
       if (!quiz.questions || quiz.questions.length === 0) {
-        console.error("[v0] Quiz has no questions, skipping:", quiz.title)
+        const reason = `Quiz "${quiz.title}" has no questions (found ${quiz.questions?.length || 0})`
+        console.error("[v0]", reason)
+        skippedQuizzes.push(reason)
         continue
       }
       
@@ -256,8 +259,10 @@ ${quantity > 1 ? `{
       console.log("[v0] Quiz insert result:", { success: !quizError, quizId: newQuiz?.id, error: quizError })
 
       if (quizError) {
-        console.error("[v0] Failed to insert quiz:", quizError)
+        const reason = `Quiz "${quiz.title}" failed to insert: ${quizError.message || JSON.stringify(quizError)}`
+        console.error("[v0]", reason)
         console.error("[v0] Quiz data was:", { title: quiz.title, description: quiz.description, difficulty: quiz.difficulty })
+        skippedQuizzes.push(reason)
         continue
       }
 
@@ -280,8 +285,10 @@ ${quantity > 1 ? `{
       const { error: questionsError } = await supabase.from("quiz_questions").insert(questionsToInsert)
 
       if (questionsError) {
-        console.error("[v0] Failed to insert questions:", questionsError)
+        const reason = `Quiz "${quiz.title}" questions failed to insert: ${questionsError.message || JSON.stringify(questionsError)}`
+        console.error("[v0]", reason)
         console.error("[v0] Questions data sample:", questionsToInsert[0])
+        skippedQuizzes.push(reason)
         await supabase.from("quizzes").delete().eq("id", newQuiz.id)
         continue
       }
@@ -292,12 +299,25 @@ ${quantity > 1 ? `{
     }
 
     console.log("[v0] Final result: Created", createdQuizzes.length, "quizzes with", totalQuestions, "total questions")
+    if (skippedQuizzes.length > 0) {
+      console.log("[v0] Skipped quizzes:", skippedQuizzes)
+    }
+
+    // If no quizzes were created, return an error with details
+    if (createdQuizzes.length === 0 && skippedQuizzes.length > 0) {
+      return NextResponse.json({ 
+        error: "Failed to create any quizzes",
+        details: skippedQuizzes.join("\n\n"),
+        skippedQuizzes 
+      }, { status: 500 })
+    }
 
     return NextResponse.json({ 
       success: true, 
       quizzesCreated: createdQuizzes.length,
       questionsCreated: totalQuestions,
-      quizzes: createdQuizzes 
+      quizzes: createdQuizzes,
+      ...(skippedQuizzes.length > 0 && { warnings: skippedQuizzes })
     })
   } catch (error) {
     console.error("Quiz generation error:", error)
