@@ -135,8 +135,10 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
 
       const { error: insertError } = await supabase.from("scenarios").insert({
         title: `Scenario #${nextNumber}`,
+        description: answer.trim(), // Using answer as description
         video_url: videoUrl,
-        ai_answer: answer.trim(),
+        correct_decision: answer.trim(), // Using answer as correct decision
+        explanation: answer.trim(), // Using answer as explanation
         law_category: suggestedLawCategory || null,
         law_section: suggestedLawSection || null,
         scenario_type: suggestedScenarioType,
