@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,13 +9,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
-import { Upload, Loader2, CheckCircle2, XCircle, Sparkles } from "lucide-react"
+import { Loader2, CheckCircle2, XCircle, Sparkles } from "lucide-react"
+import { YouTubePlayer, extractYouTubeId } from "@/components/youtube-player"
 
 export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
-  const [videoFile, setVideoFile] = useState<File | null>(null)
   const [videoUrl, setVideoUrl] = useState("")
-  const [isUploading, setIsUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
   const [isSaving, setIsSaving] = useState(false)
   const [isGeneratingTags, setIsGeneratingTags] = useState(false)
   const [error, setError] = useState("")
@@ -40,50 +38,7 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
     getNextNumber()
   }, [])
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      if (!file.type.startsWith("video/")) {
-        setError("Please select a video file")
-        return
-      }
-      // No file size limit - chunked upload handles any size
-      setVideoFile(file)
-      setError("")
-    }
-  }
-
-  const uploadVideo = useCallback(async () => {
-    if (!videoFile) return
-
-    setIsUploading(true)
-    setUploadProgress(0)
-    setError("")
-
-    try {
-      const formData = new FormData()
-      formData.append("file", videoFile)
-
-      const response = await fetch("/api/upload-video", {
-        method: "POST",
-        body: formData,
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || "Upload failed")
-      }
-
-      setVideoUrl(data.url)
-      setUploadProgress(100)
-    } catch (err) {
-      console.error("Video upload error:", err)
-      setError(err instanceof Error ? err.message : "Failed to upload video.")
-    } finally {
-      setIsUploading(false)
-    }
-  }, [videoFile])
+  const isValidYouTubeUrl = !!extractYouTubeId(videoUrl)
 
   const generateTags = async () => {
     if (!answer.trim()) {
@@ -123,8 +78,8 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
   }
 
   const saveScenario = async () => {
-    if (!videoUrl) {
-      setError("Please upload a video first")
+    if (!isValidYouTubeUrl) {
+      setError("Please enter a valid YouTube URL")
       return
     }
     if (!answer.trim()) {
@@ -136,39 +91,27 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
     setError("")
 
     try {
-      const supabase = createClient()
-      
-      // Ensure we have valid text for required fields
-      const answerText = answer.trim() || "No answer provided"
+      const answerText = answer.trim()
       const scenarioTitle = `Scenario #${nextNumber}`
 
-      console.log("[v0] Saving scenario with data:", {
-        title: scenarioTitle,
-        description: answerText,
-        video_url: videoUrl,
-        correct_decision: answerText,
-        explanation: answerText,
-        law_category: suggestedLawCategory || null,
-        law_section: suggestedLawSection || null,
-        scenario_type: suggestedScenarioType,
-        difficulty: suggestedDifficulty,
+      const response = await fetch("/api/admin/save-scenario", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: scenarioTitle,
+          video_url: videoUrl,
+          ai_answer: answerText,
+          ai_description: answerText,
+          law_category: suggestedLawCategory || null,
+          law_section: suggestedLawSection || null,
+          scenario_type: suggestedScenarioType,
+          difficulty: suggestedDifficulty,
+          points_value: 10,
+        }),
       })
 
-      const { error: insertError } = await supabase.from("scenarios").insert({
-        title: scenarioTitle,
-        description: answerText,
-        video_url: videoUrl,
-        correct_decision: answerText,
-        explanation: answerText,
-        law_category: suggestedLawCategory || null,
-        law_section: suggestedLawSection || null,
-        scenario_type: suggestedScenarioType,
-        difficulty: suggestedDifficulty,
-        is_active: true,
-        points_value: 10,
-      })
-
-      if (insertError) throw insertError
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || "Failed to save")
 
       onSuccess()
     } catch (err) {
@@ -189,76 +132,38 @@ export function VideoScenarioUpload({ onSuccess }: { onSuccess: () => void }) {
             <p className="text-lg font-bold">Scenario #{nextNumber}</p>
           </div>
 
-          {/* Video Upload */}
+          {/* YouTube URL */}
           <div className="space-y-2">
-            <Label htmlFor="video-upload">Upload Video</Label>
-            <div className="flex gap-2">
-              <Input
-                id="video-upload"
-                type="file"
-                accept="video/*"
-                onChange={handleFileChange}
-                disabled={isUploading}
-              />
-              <Button
-                onClick={uploadVideo}
-                disabled={!videoFile || isUploading || !!videoUrl}
-                className="whitespace-nowrap"
-              >
-                {isUploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    {uploadProgress}%
-                  </>
-                ) : videoUrl ? (
-                  <>
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                    Uploaded
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload
-                  </>
-                )}
-              </Button>
-            </div>
-            {videoFile && !videoUrl && (
-              <p className="text-sm text-muted-foreground">
-                Selected: {videoFile.name} ({(videoFile.size / 1024 / 1024).toFixed(2)} MB)
-                {videoFile.size > 250 * 1024 * 1024 && (
-                  <span className="text-amber-600 ml-2">
-                    (Large file - will be uploaded in chunks)
-                  </span>
-                )}
+            <Label htmlFor="youtube-url">YouTube Video URL</Label>
+            <Input
+              id="youtube-url"
+              type="url"
+              value={videoUrl}
+              onChange={(e) => {
+                setVideoUrl(e.target.value)
+                setError("")
+              }}
+              placeholder="https://www.youtube.com/watch?v=..."
+            />
+            {videoUrl && !isValidYouTubeUrl && (
+              <p className="text-sm text-red-500">
+                Please enter a valid YouTube URL
               </p>
             )}
           </div>
 
-          {/* Progress Bar */}
-          {isUploading && (
-            <div className="w-full bg-gray-200 rounded-full h-2.5">
-              <div 
-                className="bg-purple-600 h-2.5 rounded-full transition-all duration-300" 
-                style={{ width: `${uploadProgress}%` }}
-              ></div>
-            </div>
-          )}
-
           {/* Video Preview */}
-          {videoUrl && (
+          {isValidYouTubeUrl && (
             <div className="space-y-2">
               <Label>Video Preview</Label>
-              <video
-                src={videoUrl}
-                controls
-                className="w-full rounded-lg border max-h-64"
-              />
+              <div className="rounded-lg overflow-hidden border max-h-64">
+                <YouTubePlayer url={videoUrl} />
+              </div>
             </div>
           )}
 
-          {/* Answer field - shown after video upload */}
-          {videoUrl && (
+          {/* Answer field - shown after valid YouTube URL */}
+          {isValidYouTubeUrl && (
             <>
               <div className="space-y-2">
                 <Label htmlFor="answer">Answer</Label>
