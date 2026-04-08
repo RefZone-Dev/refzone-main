@@ -1,17 +1,17 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/lib/auth"
+import { createServiceClient } from "@/lib/supabase/service"
 import { redirect } from "next/navigation"
 import { ScenarioPlayer } from "@/components/scenario-player"
 
 export default async function ScenarioDetailPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient()
-  const { id } = await params
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
+  let userId: string
+  try {
+    userId = await requireAuth()
+  } catch {
     redirect("/auth/login")
   }
+  const supabase = createServiceClient()
+  const { id } = await params
 
   // Fetch scenario details
   const { data: scenario } = await supabase.from("scenarios").select("*").eq("id", id).single()
@@ -20,5 +20,5 @@ export default async function ScenarioDetailPage({ params }: { params: { id: str
     redirect("/scenarios")
   }
 
-  return <ScenarioPlayer scenario={scenario} userId={user.id} />
+  return <ScenarioPlayer scenario={scenario} userId={userId} />
 }

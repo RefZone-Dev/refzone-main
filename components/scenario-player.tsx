@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { Timer, Award, ArrowLeft, ArrowRight, Loader2, CheckCircle2 } from "lucide-react"
 
+import { getDifficultyColor, formatTime, updateDailyStreak } from "@/lib/shared-utils"
 import { StreakCelebration } from "@/components/streak-celebration"
 import { CustomCelebration } from "@/components/custom-celebration"
 import { FeedbackCard } from "@/components/feedback-card"
@@ -48,25 +49,8 @@ export function ScenarioPlayer({ scenario, userId }: ScenarioPlayerProps) {
   const [allCompleted, setAllCompleted] = useState(false)
   const router = useRouter()
 
-  const [modal, setModal] = useState({
-    isOpen: false,
-    type: "info" as "success" | "error" | "warning" | "info" | "confirm",
-    title: "",
-    message: "",
-  })
-
-
   const [celebratingStreak, setCelebratingStreak] = useState<number | null>(null)
   const [showCustomCelebration, setShowCustomCelebration] = useState(false)
-
-  const showModal = (type: "success" | "error" | "warning" | "info" | "confirm", title: string, message: string) => {
-    setModal({
-      isOpen: true,
-      type,
-      title,
-      message,
-    })
-  }
 
   useEffect(() => {
     if (!isSubmitted) {
@@ -111,12 +95,6 @@ export function ScenarioPlayer({ scenario, userId }: ScenarioPlayerProps) {
     }
   }
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, "0")}`
-  }
-
   const handleSubmit = async () => {
     if (!userDecision.trim()) return
 
@@ -136,60 +114,25 @@ export function ScenarioPlayer({ scenario, userId }: ScenarioPlayerProps) {
       const aiResult = await aiCheckResponse.json()
       const isCorrect = aiResult.isCorrect && aiResult.confidence >= 70
 
-      const supabase = createClient()
       const pointsEarned = isCorrect ? scenario.points_value : 0
 
-      await supabase.from("scenario_responses").insert({
-        user_id: userId,
-        scenario_id: scenario.id,
-        user_decision: userDecision,
-        is_correct: isCorrect,
-        time_taken_seconds: timeElapsed,
-        points_earned: pointsEarned,
-      })
-
-      const { data: profile } = await supabase.from("profiles").select("*").eq("id", userId).single()
-
-      if (profile) {
-        const today = new Date().toISOString().split("T")[0]
-        const lastActivity = profile.last_activity_date
-        let newStreak = profile.current_streak || 0
-        let longestStreak = profile.longest_streak || 0
-        let streakContinued = false
-
-        if (lastActivity) {
-          const lastDate = new Date(lastActivity)
-          const todayDate = new Date(today)
-          const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
-
-          if (diffDays === 1) {
-            newStreak += 1
-            streakContinued = true
-          } else if (diffDays > 1) {
-            newStreak = 1
-          }
-        } else {
-          newStreak = 1
-        }
-
-        if (newStreak > longestStreak) {
-          longestStreak = newStreak
-        }
-
-        await supabase
-          .from("profiles")
-          .update({
-            total_points: profile.total_points + pointsEarned,
-            current_streak: newStreak,
-            longest_streak: longestStreak,
-            last_activity_date: today,
-          })
-          .eq("id", userId)
-
-        if (streakContinued && newStreak > 1) {
-          setCelebratingStreak(newStreak)
-        }
-
+      // Submit through API (uses service client to bypass RLS)
+      try {
+        await fetch("/api/scenario-submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scenarioId: scenario.id,
+            userDecision,
+            isCorrect,
+            timeElapsed,
+            pointsEarned,
+            lawCategory: scenario.law_category,
+            lawSection: scenario.law_section,
+          }),
+        })
+      } catch (submitErr) {
+        console.error("Failed to save scenario response:", submitErr)
       }
 
       setResult({
@@ -206,24 +149,10 @@ export function ScenarioPlayer({ scenario, userId }: ScenarioPlayerProps) {
       if (isCorrect) {
         setShowCustomCelebration(true)
       }
-    } catch (error) {
-      console.error("[v0] Error submitting answer:", error)
-      showModal("error", "Submission Failed", "Failed to submit answer. Please try again.")
+    } catch {
+      // submission failed
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "easy":
-        return "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"
-      case "medium":
-        return "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800"
-      case "hard":
-        return "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
-      default:
-        return "bg-muted text-muted-foreground"
     }
   }
 
@@ -242,7 +171,6 @@ export function ScenarioPlayer({ scenario, userId }: ScenarioPlayerProps) {
       {celebratingStreak && (
         <StreakCelebration streakDays={celebratingStreak} onClose={() => setCelebratingStreak(null)} />
       )}
-
 
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">

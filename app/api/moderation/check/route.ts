@@ -1,17 +1,12 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/lib/auth"
 import { NextResponse } from "next/server"
 import { generateText } from "ai"
+import { parseAIJsonResponse } from "@/lib/parse-ai-json"
+import { getModel } from "@/lib/ai-model"
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const userId = await requireAuth()
 
     const { title, content } = await request.json()
 
@@ -20,8 +15,8 @@ export async function POST(request: Request) {
     }
 
     const { text: responseText } = await generateText({
-      model: "groq/llama-3.3-70b-versatile",
-      system: `You are a content moderation assistant for a referee training community forum. 
+      model: getModel(),
+      system: `You are a content moderation assistant for a referee training community forum.
 Your job is to analyze forum posts and determine if they are appropriate.
 
 Posts should be flagged as inappropriate if they contain:
@@ -52,12 +47,9 @@ Be lenient - only flag clearly inappropriate content. Normal discussions, even h
     // Parse the AI response
     let result: { appropriate: boolean; reason?: string }
     try {
-      // Extract JSON from response (in case there's extra text)
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/)
-      result = jsonMatch ? JSON.parse(jsonMatch[0]) : { appropriate: true }
+      result = parseAIJsonResponse(responseText) as { appropriate: boolean; reason?: string }
     } catch {
       // If parsing fails, default to appropriate
-      console.error("[v0] Failed to parse moderation response:", responseText)
       result = { appropriate: true }
     }
 
@@ -66,8 +58,7 @@ Be lenient - only flag clearly inappropriate content. Normal discussions, even h
       reason: result.reason || null,
       status: result.appropriate ? "approved" : "pending_review",
     })
-  } catch (error) {
-    console.error("[v0] Moderation check error:", error)
+  } catch {
     // On error, default to allowing the post (fail open)
     return NextResponse.json({
       appropriate: true,

@@ -1,22 +1,18 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/lib/auth"
+import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
   try {
+    const userId = await requireAuth()
+
     const { friendshipId, action } = await request.json()
 
     if (!friendshipId || !action || !["accept", "decline"].includes(action)) {
       return NextResponse.json({ error: "Invalid parameters" }, { status: 400 })
     }
 
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
+    const supabase = createServiceClient()
 
     // Get the friendship to verify user is the addressee
     const { data: friendship, error: fetchError } = await supabase
@@ -30,7 +26,7 @@ export async function POST(request: Request) {
     }
 
     // Verify the current user is the addressee (recipient of the request)
-    if (friendship.addressee_id !== user.id) {
+    if (friendship.addressee_id !== userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 })
     }
 

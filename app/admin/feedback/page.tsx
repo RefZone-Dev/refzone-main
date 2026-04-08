@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useAuth, useUser } from "@clerk/nextjs"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Shield, Star, Trash2 } from "lucide-react"
@@ -22,6 +23,8 @@ interface Feedback {
 }
 
 export default function AdminFeedbackPage() {
+  const { userId } = useAuth()
+  const { user: clerkUser } = useUser()
   const [feedback, setFeedback] = useState<Feedback[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
@@ -36,22 +39,19 @@ export default function AdminFeedbackPage() {
 
   useEffect(() => {
     const fetchFeedback = async () => {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
+      if (!userId) {
         router.push("/auth/login")
         return
       }
 
-      const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single()
-
-      if (!profile?.is_admin) {
+      const email = clerkUser?.primaryEmailAddress?.emailAddress
+      const adminEmails = ["henrytowen@googlemail.com", "refzone.office@gmail.com"]
+      if (!email || !adminEmails.includes(email)) {
         router.push("/dashboard")
         return
       }
+
+      const supabase = createClient()
 
       const { data } = await supabase
         .from("user_feedback")
@@ -66,7 +66,7 @@ export default function AdminFeedbackPage() {
     }
 
     fetchFeedback()
-  }, [router])
+  }, [router, clerkUser])
 
   const deleteFeedback = async (feedbackId: string) => {
     setModal({

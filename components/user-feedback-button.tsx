@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { MessageSquare, Loader2 } from "lucide-react"
+import { useAuth } from "@clerk/nextjs"
 import { createClient } from "@/lib/supabase/client"
 
 interface UserFeedbackButtonProps {
@@ -24,6 +25,7 @@ interface UserFeedbackButtonProps {
 }
 
 export function UserFeedbackButton({ contentType, contentId, contentTitle }: UserFeedbackButtonProps) {
+  const { userId } = useAuth()
   const [open, setOpen] = useState(false)
   const [feedbackType, setFeedbackType] = useState<string>("suggestion")
   const [feedback, setFeedback] = useState("")
@@ -36,22 +38,18 @@ export function UserFeedbackButton({ contentType, contentId, contentTitle }: Use
     setIsSubmitting(true)
 
     try {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
+      if (!userId) {
         alert("Please log in to submit feedback")
         return
       }
 
+      const supabase = createClient()
       await supabase.from("user_feedback").insert({
-        user_id: user.id,
+        user_id: userId,
         feedback_type: feedbackType,
-        related_id: contentId || null, // Changed from content_id to related_id
-        feedback_text: feedback, // This was already correct
-        rating: null, // Optional rating field
+        related_id: contentId || null,
+        feedback_text: feedback,
+        rating: null,
       })
 
       setSubmitted(true)
@@ -61,8 +59,8 @@ export function UserFeedbackButton({ contentType, contentId, contentTitle }: Use
         setFeedback("")
         setFeedbackType("suggestion")
       }, 2000)
-    } catch (error) {
-      console.error("Error submitting feedback:", error)
+    } catch {
+      // Silently handle
     } finally {
       setIsSubmitting(false)
     }

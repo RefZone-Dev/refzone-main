@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -12,17 +13,158 @@ interface Message {
   content: string
 }
 
+// Renders AI responses with formatting: bold, italics, law references, and highlights
+function FormattedResponse({ content }: { content: string }) {
+  // Split into paragraphs
+  const paragraphs = content.split(/\n\n+/)
+
+  return (
+    <div className="space-y-3">
+      {paragraphs.map((para, i) => {
+        const trimmed = para.trim()
+        if (!trimmed) return null
+
+        // Check if it's a law reference line (e.g. "Law 12.2: ..." or "**Law 14**")
+        const isLawRef = /^(Law \d+|IFAB|According to Law)/i.test(trimmed.replace(/\*\*/g, ""))
+
+        // Check if it looks like a summary/verdict line
+        const isSummary = /^(Summary|Verdict|Decision|Correct (decision|call)|In summary|Quick summary|TL;DR)/i.test(trimmed.replace(/\*\*/g, ""))
+
+        // Format inline markdown
+        const formatInline = (text: string) => {
+          const parts: React.ReactNode[] = []
+          let remaining = text
+          let key = 0
+
+          while (remaining.length > 0) {
+            // Bold: **text**
+            const boldMatch = remaining.match(/\*\*(.+?)\*\*/)
+            // Italic: *text* or _text_
+            const italicMatch = remaining.match(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/)
+            // Law reference: Law XX
+            const lawMatch = remaining.match(/(Law \d+(\.\d+)?)/i)
+
+            // Find earliest match
+            const matches = [
+              boldMatch ? { type: "bold", match: boldMatch } : null,
+              italicMatch ? { type: "italic", match: italicMatch } : null,
+              lawMatch && !boldMatch ? { type: "law", match: lawMatch } : null,
+            ].filter(Boolean).sort((a, b) => (a!.match.index || 0) - (b!.match.index || 0))
+
+            if (matches.length === 0 || matches[0]!.match.index === undefined) {
+              parts.push(<span key={key++}>{remaining}</span>)
+              break
+            }
+
+            const first = matches[0]!
+            const idx = first.match.index!
+
+            // Text before match
+            if (idx > 0) parts.push(<span key={key++}>{remaining.slice(0, idx)}</span>)
+
+            if (first.type === "bold") {
+              parts.push(<strong key={key++} className="font-semibold text-foreground">{first.match[1]}</strong>)
+            } else if (first.type === "italic") {
+              parts.push(<em key={key++} className="italic">{first.match[1]}</em>)
+            } else if (first.type === "law") {
+              parts.push(<span key={key++} className="text-purple-400 font-medium">{first.match[0]}</span>)
+            }
+
+            remaining = remaining.slice(idx + first.match[0].length)
+          }
+
+          return parts
+        }
+
+        // Law reference block
+        if (isLawRef) {
+          return (
+            <div key={i} className="rounded-md bg-purple-500/10 border border-purple-500/20 px-3 py-2 text-xs text-purple-400">
+              {formatInline(trimmed)}
+            </div>
+          )
+        }
+
+        // Summary block
+        if (isSummary) {
+          return (
+            <div key={i} className="rounded-md bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 text-sm">
+              {formatInline(trimmed)}
+            </div>
+          )
+        }
+
+        // Check for bullet points
+        if (trimmed.includes("\n- ") || trimmed.startsWith("- ")) {
+          const lines = trimmed.split("\n")
+          return (
+            <div key={i}>
+              {lines.map((line, j) => {
+                if (line.startsWith("- ")) {
+                  return <p key={j} className="pl-3 border-l-2 border-purple-500/20 ml-1 my-1">{formatInline(line.slice(2))}</p>
+                }
+                return <p key={j} className="whitespace-pre-wrap">{formatInline(line)}</p>
+              })}
+            </div>
+          )
+        }
+
+        return <p key={i} className="whitespace-pre-wrap">{formatInline(trimmed)}</p>
+      })}
+    </div>
+  )
+}
+
 export default function DecisionLabClient() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [hasAutoSubmitted, setHasAutoSubmitted] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [messages])
+
+  // Auto-submit a question from URL query param (e.g. ?q=Tell me about...)
+  const submitMessage = useCallback(async (text: string) => {
+    const userMessage: Message = { role: "user", content: text }
+    const newMessages = [userMessage]
+    setMessages(newMessages)
+    setIsLoading(true)
+
+    try {
+      const response = await fetch("/api/decision-lab", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: newMessages, isInitial: true }),
+      })
+
+      if (!response.ok) throw new Error("Failed to get response")
+
+      const data = await response.json()
+      if (data.error) {
+        setMessages([...newMessages, { role: "assistant", content: `Error: ${data.error}` }])
+      } else {
+        setMessages([...newMessages, { role: "assistant", content: data.response }])
+      }
+    } catch {
+      setMessages([...newMessages, { role: "assistant", content: "Sorry, I encountered an error. Please try again." }])
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    const q = searchParams.get("q")
+    if (q && !hasAutoSubmitted && messages.length === 0) {
+      setHasAutoSubmitted(true)
+      submitMessage(q)
+    }
+  }, [searchParams, hasAutoSubmitted, messages.length, submitMessage])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -91,11 +233,11 @@ export default function DecisionLabClient() {
       <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
         <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
         <div className="text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">Beta Feature - AI Disclaimer</p>
+          <p className="font-medium text-foreground">Beta Feature - Disclaimer</p>
           <p className="mt-1">
-            This feature uses AI to analyze scenarios. AI responses may be inaccurate or incomplete.
+            Decision Lab uses a specialised AI trained on the Laws of the Game to analyse scenarios. Responses may be inaccurate or incomplete.
             Always refer to the official IFAB Laws of the Game for definitive rulings. Do not use
-            AI-generated analysis as the sole basis for match decisions.
+            generated analysis as the sole basis for match decisions.
           </p>
         </div>
       </div>
@@ -149,11 +291,15 @@ export default function DecisionLabClient() {
                           : "bg-muted text-foreground"
                       }`}
                     >
-                      <p className="whitespace-pre-wrap">{message.content}</p>
+                      {message.role === "assistant" ? (
+                        <FormattedResponse content={message.content} />
+                      ) : (
+                        <p className="whitespace-pre-wrap">{message.content}</p>
+                      )}
                     </div>
                     {message.role === "assistant" && (
                       <p className="text-xs text-muted-foreground mt-1 ml-1 italic">
-                        AI-generated analysis - may contain errors. Verify with official LOTG.
+                        Generated analysis - may contain errors. Verify with official LOTG.
                       </p>
                     )}
                   </div>

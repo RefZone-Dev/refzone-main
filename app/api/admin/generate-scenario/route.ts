@@ -1,7 +1,9 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireAdmin } from "@/lib/auth"
 import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 import { generateText } from "ai"
+import { parseAIJsonResponse } from "@/lib/parse-ai-json"
+import { getModel } from "@/lib/ai-model"
 
 const VALID_SCENARIO_TYPES = ["foul", "offside", "handball", "misconduct", "advantage", "var"] as const
 type ScenarioType = (typeof VALID_SCENARIO_TYPES)[number]
@@ -45,26 +47,9 @@ function validateScenarioType(type: string): ScenarioType {
 
 export async function POST(request: Request) {
   try {
-    const authClient = await createClient()
-    const { data: { user } } = await authClient.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-    }
-
-    const userId = user.id
+    await requireAdmin()
 
     const supabase = createServiceClient()
-
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", userId)
-      .single()
-
-    if (profileError || !profile?.is_admin) {
-      return NextResponse.json({ error: "Not authorized" }, { status: 403 })
-    }
 
     const { data: configData } = await supabase
       .from("admin_config")
@@ -95,7 +80,7 @@ export async function POST(request: Request) {
     }
 
     const { text } = await generateText({
-      model: "groq/llama-3.3-70b-versatile",
+      model: getModel(),
       system: lawsDocument
         ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
         : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",
@@ -117,25 +102,7 @@ IMPORTANT: Return ONLY valid JSON in this exact format:
 CRITICAL: The title MUST be exactly "Scenario #${nextScenarioNumber}" - no descriptive titles allowed.`,
     })
 
-    let cleanedText = text.trim()
-    if (cleanedText.startsWith("```json")) {
-      cleanedText = cleanedText.slice(7)
-    }
-    if (cleanedText.startsWith("```")) {
-      cleanedText = cleanedText.slice(3)
-    }
-    if (cleanedText.endsWith("```")) {
-      cleanedText = cleanedText.slice(0, -3)
-    }
-    cleanedText = cleanedText.trim()
-
-    const jsonStartIndex = cleanedText.indexOf("{")
-    const jsonEndIndex = cleanedText.lastIndexOf("}")
-    if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonStartIndex < jsonEndIndex) {
-      cleanedText = cleanedText.substring(jsonStartIndex, jsonEndIndex + 1)
-    }
-
-    const scenarioData = JSON.parse(cleanedText)
+    const scenarioData = parseAIJsonResponse(text) as any
     const validatedScenarioType = validateScenarioType(scenarioData.scenario_type || "foul")
 
     const { data: newScenario, error } = await supabase
@@ -161,11 +128,7 @@ CRITICAL: The title MUST be exactly "Scenario #${nextScenarioNumber}" - no descr
 
     return NextResponse.json({ success: true, scenario: newScenario })
   } catch (error) {
-    console.error("Scenario generation error:", error)
     const errorMessage = error instanceof Error ? error.message : String(error)
-    const errorStack = error instanceof Error ? error.stack : undefined
-    console.error("Error details:", { message: errorMessage, stack: errorStack })
-
     return NextResponse.json(
       {
         error: "Generation failed",

@@ -1,9 +1,10 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/lib/auth"
+import { createServiceClient } from "@/lib/supabase/service"
 import { redirect } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { MessageSquare, Reply, Star, Trophy, Calendar } from "lucide-react"
+import { MessageSquare, Reply, Flame, Calendar } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import { VerifiedBadge } from "@/components/verified-badge"
@@ -16,14 +17,14 @@ export const metadata = {
 }
 
 export default async function ProfilePage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  let userId: string
+  try {
+    userId = await requireAuth()
+  } catch {
     redirect("/auth/login")
   }
+
+  const supabase = createServiceClient()
 
   // Check if profile is closed
   const closure = await checkFeatureClosure('profile')
@@ -32,7 +33,7 @@ export default async function ProfilePage() {
   }
 
   // Fetch user profile
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", userId).single()
 
   // Fetch user's posts
   const { data: posts } = await supabase
@@ -41,7 +42,7 @@ export default async function ProfilePage() {
       *,
       forum_replies(count)
     `)
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("created_at", { ascending: false })
 
   // Fetch user's replies
@@ -51,20 +52,9 @@ export default async function ProfilePage() {
       *,
       forum_posts(id, title)
     `)
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .limit(20)
-
-  // Fetch user's customization
-  const { data: customization } = await supabase
-    .from("user_customization")
-    .select(`
-      active_badge_id,
-      active_theme_id,
-      shop_items!user_customization_active_badge_id_fkey(name, preview_data)
-    `)
-    .eq("user_id", user.id)
-    .maybeSingle()
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -79,17 +69,11 @@ export default async function ProfilePage() {
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold">{profile?.display_name || "User"}</h1>
                 <VerifiedBadge isVerified={profile?.is_verified || false} className="h-5 w-5" />
-                {customization?.shop_items && (
-                  <Badge variant="secondary" className="gap-1">
-                    <Star className="h-3 w-3 text-amber-500" />
-                    {(customization.shop_items as any).name}
-                  </Badge>
-                )}
               </div>
               <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <Trophy className="h-4 w-4 text-amber-500" />
-                  {profile?.total_points || 0} points
+                  <Flame className="h-4 w-4 text-orange-500" />
+                  {profile?.current_streak || 0} day streak
                 </span>
                 <span className="flex items-center gap-1">
                   <MessageSquare className="h-4 w-4 text-blue-500" />

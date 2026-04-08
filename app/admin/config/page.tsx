@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { useAuth, useUser } from "@clerk/nextjs"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Shield, Save, Loader2, Wand2, Sparkles, BookOpen, Upload, FileText, Check } from "lucide-react"
@@ -20,12 +21,13 @@ interface Config {
 }
 
 export default function AdminConfigPage() {
+  const { userId } = useAuth()
+  const { user: clerkUser } = useUser()
   const [configs, setConfigs] = useState<Config[]>([])
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [isGeneratingScenario, setIsGeneratingScenario] = useState(false)
   const [isGeneratingQuiz, setIsGeneratingQuiz] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
 
   const [modal, setModal] = useState({
@@ -46,24 +48,19 @@ export default function AdminConfigPage() {
 
   useEffect(() => {
     const fetchConfig = async () => {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
+      if (!userId) {
         router.push("/auth/login")
         return
       }
 
-      setUserId(user.id)
-
-      const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single()
-
-      if (!profile?.is_admin) {
+      const email = clerkUser?.primaryEmailAddress?.emailAddress
+      const adminEmails = ["henrytowen@googlemail.com", "refzone.office@gmail.com"]
+      if (!email || !adminEmails.includes(email)) {
         router.push("/dashboard")
         return
       }
+
+      const supabase = createClient()
 
       const { data } = await supabase.from("admin_config").select("*").order("config_key")
 
@@ -82,7 +79,7 @@ export default function AdminConfigPage() {
     }
 
     fetchConfig()
-  }, [router])
+  }, [router, clerkUser])
 
   const handleSave = async () => {
     setIsSaving(true)

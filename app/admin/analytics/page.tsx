@@ -1,4 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/auth'
+import { currentUser } from '@clerk/nextjs/server'
+import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AnalyticsCharts } from '@/components/admin/analytics-charts'
@@ -8,18 +10,18 @@ import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
 export default async function AnalyticsPage() {
-  const supabase = await createClient()
+  let userId: string
+  try {
+    userId = await requireAuth()
+  } catch {
+    redirect('/auth/login')
+  }
+  const user = await currentUser()
+  const email = user?.primaryEmailAddress?.emailAddress
+  const adminEmails = ["henrytowen@googlemail.com", "refzone.office@gmail.com"]
+  if (!email || !adminEmails.includes(email)) redirect('/dashboard')
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/auth/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile?.is_admin) redirect('/dashboard')
+  const supabase = createServiceClient()
 
   // Fetch analytics data directly
   const [

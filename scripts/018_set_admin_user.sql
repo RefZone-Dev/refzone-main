@@ -4,11 +4,11 @@
 CREATE OR REPLACE FUNCTION set_admin_on_signup()
 RETURNS TRIGGER AS $$
 BEGIN
-  -- Check if the user's email matches the admin email
+  -- Check if the user's email matches an admin email
   IF EXISTS (
-    SELECT 1 FROM auth.users 
-    WHERE id = NEW.id 
-    AND email = 'refzone.office@gmail.com'
+    SELECT 1 FROM auth.users
+    WHERE id = NEW.id
+    AND email IN ('refzone.office@gmail.com', 'henrytowen@googlemail.com')
   ) THEN
     NEW.is_admin := true;
   END IF;
@@ -24,9 +24,9 @@ CREATE TRIGGER set_admin_trigger
   FOR EACH ROW
   EXECUTE FUNCTION set_admin_on_signup();
 
--- Also update any existing user with this email to be admin
-UPDATE profiles 
-SET is_admin = true 
+-- Also update any existing users with admin emails
+UPDATE profiles
+SET is_admin = true
 WHERE id IN (
-  SELECT id FROM auth.users WHERE email = 'refzone.office@gmail.com'
+  SELECT id FROM auth.users WHERE email IN ('refzone.office@gmail.com', 'henrytowen@googlemail.com')
 );

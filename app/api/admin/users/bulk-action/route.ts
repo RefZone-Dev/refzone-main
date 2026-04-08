@@ -1,26 +1,12 @@
-import { createClient } from '@/lib/supabase/server'
+import { requireAdmin } from '@/lib/auth'
 import { createServiceClient } from '@/lib/supabase/service'
+import { clerkClient } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
+    const adminUserId = await requireAdmin()
     const supabaseService = createServiceClient()
-    
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    const { data: profile } = await supabaseService
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single()
-
-    if (!profile?.is_admin) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
 
     const { action, userIds } = await request.json()
 
@@ -30,19 +16,11 @@ export async function POST(request: Request) {
 
     switch (action) {
       case 'reset_password':
-        for (const userId of userIds) {
-          try {
-            const { data: authUser } = await supabaseService.auth.admin.getUserById(userId)
-            if (authUser?.user?.email) {
-              await supabase.auth.resetPasswordForEmail(authUser.user.email, {
-                redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.refzone.com.au'}/auth/reset-password`,
-              })
-            }
-          } catch (err) {
-            console.error(`Failed to reset password for ${userId}:`, err)
-          }
-        }
-        break
+        // Clerk handles password resets via its own UI/email flow
+        return NextResponse.json({
+          success: true,
+          message: 'Password resets are managed through Clerk. Users can reset via the sign-in page.',
+        })
 
       case 'grant_admin':
         await supabaseService
@@ -52,7 +30,7 @@ export async function POST(request: Request) {
         break
 
       case 'revoke_admin':
-        const filteredIds = userIds.filter((id: string) => id !== user.id)
+        const filteredIds = userIds.filter((id: string) => id !== adminUserId)
         if (filteredIds.length > 0) {
           await supabaseService
             .from('profiles')
@@ -62,12 +40,15 @@ export async function POST(request: Request) {
         break
 
       case 'delete':
+        const clerk = await clerkClient()
         for (const userId of userIds) {
-          if (userId === user.id) continue
+          if (userId === adminUserId) continue
           await supabaseService.from('profiles').delete().eq('id', userId)
           try {
-            await supabaseService.auth.admin.deleteUser(userId)
-          } catch {}
+            await clerk.users.deleteUser(userId)
+          } catch {
+            // Clerk user deletion failed, profile already removed
+          }
         }
         break
 
@@ -82,12 +63,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ message: 'Unknown action' }, { status: 400 })
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: `Successfully performed ${action} on ${userIds.length} user(s)`,
     })
-  } catch (error) {
-    console.error('Bulk action error:', error)
+  } catch {
     return NextResponse.json(
       { message: 'Failed to perform bulk action' },
       { status: 500 }

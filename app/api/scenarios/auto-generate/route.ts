@@ -1,7 +1,9 @@
+import { requireAuth } from "@/lib/auth"
 import { createServiceClient } from "@/lib/supabase/service"
-import { createClient } from "@/lib/supabase/server"
 import { NextResponse } from "next/server"
 import { generateText } from "ai"
+import { parseAIJsonResponse } from "@/lib/parse-ai-json"
+import { getModel } from "@/lib/ai-model"
 
 const VALID_SCENARIO_TYPES = ["foul", "offside", "handball", "misconduct", "advantage", "var"] as const
 type ScenarioType = (typeof VALID_SCENARIO_TYPES)[number]
@@ -44,15 +46,7 @@ function validateScenarioType(type: string): ScenarioType {
 
 export async function POST() {
   try {
-    // Verify user is authenticated
-    const supabaseAuth = await createClient()
-    const {
-      data: { user },
-    } = await supabaseAuth.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-    }
+    await requireAuth()
 
     const supabase = createServiceClient()
 
@@ -88,7 +82,7 @@ export async function POST() {
 
     // Generate scenario using AI
     const { text } = await generateText({
-      model: "groq/llama-3.3-70b-versatile",
+      model: getModel(),
       system: lawsDocument
         ? `You are a football referee instructor. You MUST reference this complete Laws of the Game document for accuracy:\n\n${lawsDocument}`
         : "You are a football referee instructor with knowledge of IFAB Laws of the Game.",
@@ -110,26 +104,7 @@ IMPORTANT: Return ONLY valid JSON in this exact format:
 CRITICAL: The title MUST be exactly "Scenario #${nextScenarioNumber}" - no descriptive titles allowed.`,
     })
 
-    // Parse AI response
-    let cleanedText = text.trim()
-    if (cleanedText.startsWith("```json")) {
-      cleanedText = cleanedText.slice(7)
-    }
-    if (cleanedText.startsWith("```")) {
-      cleanedText = cleanedText.slice(3)
-    }
-    if (cleanedText.endsWith("```")) {
-      cleanedText = cleanedText.slice(0, -3)
-    }
-    cleanedText = cleanedText.trim()
-
-    const jsonStartIndex = cleanedText.indexOf("{")
-    const jsonEndIndex = cleanedText.lastIndexOf("}")
-    if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonStartIndex < jsonEndIndex) {
-      cleanedText = cleanedText.substring(jsonStartIndex, jsonEndIndex + 1)
-    }
-
-    const scenarioData = JSON.parse(cleanedText)
+    const scenarioData = parseAIJsonResponse(text) as any
     const validatedScenarioType = validateScenarioType(scenarioData.scenario_type || "foul")
 
     // Insert new scenario
@@ -156,7 +131,6 @@ CRITICAL: The title MUST be exactly "Scenario #${nextScenarioNumber}" - no descr
 
     return NextResponse.json({ success: true, scenario: newScenario })
   } catch (error) {
-    console.error("Auto scenario generation error:", error)
     const errorMessage = error instanceof Error ? error.message : String(error)
     return NextResponse.json({ error: "Generation failed", details: errorMessage }, { status: 500 })
   }

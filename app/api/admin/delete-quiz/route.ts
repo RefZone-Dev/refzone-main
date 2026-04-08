@@ -1,17 +1,11 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireAdmin } from "@/lib/auth"
 import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 
 export async function DELETE(request: Request) {
   try {
-    const authClient = await createClient()
-    const { data: { user } } = await authClient.auth.getUser()
+    await requireAdmin()
 
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-    }
-
-    const userId = user.id
     const { searchParams } = new URL(request.url)
     const quizId = searchParams.get("id")
 
@@ -20,17 +14,6 @@ export async function DELETE(request: Request) {
     }
 
     const supabase = createServiceClient()
-
-    // Verify user is admin
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("is_admin")
-      .eq("id", userId)
-      .single()
-
-    if (profileError || !profile?.is_admin) {
-      return NextResponse.json({ error: "Not authorized" }, { status: 403 })
-    }
 
     // Delete in order: answers -> attempts -> questions -> quiz
     const { data: attempts } = await supabase.from("quiz_attempts").select("id").eq("quiz_id", quizId)

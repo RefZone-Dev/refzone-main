@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { useAuth } from "@clerk/nextjs"
 import { createClient } from "@/lib/supabase/client"
 
 type ShopItem = {
@@ -58,6 +59,7 @@ export function useCustomization() {
 }
 
 export function CustomizationProvider({ children }: { children: ReactNode }) {
+  const { userId } = useAuth()
   const [customization, setCustomization] = useState<UserCustomization | null>(null)
   const [equippedItems, setEquippedItems] = useState<CustomizationContextType["equippedItems"]>({
     badge: null,
@@ -78,26 +80,17 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
     }
 
     try {
+      if (!userId) {
+        setLoading(false)
+        return
+      }
+
       const supabase = createClient()
-
-      let user = null
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        user = session?.user || null
-      } catch (authFetchError) {
-        setLoading(false)
-        return
-      }
-
-      if (!user) {
-        setLoading(false)
-        return
-      }
 
       const { data: customData, error: customError } = await supabase
         .from("user_customization")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .maybeSingle()
 
       // If table doesn't exist or any query error, silently skip customization
@@ -136,7 +129,8 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
           }
         }
       }
-    } catch (error) {
+    } catch {
+      // Customization load failed silently - using defaults
     } finally {
       setLoading(false)
     }
@@ -194,23 +188,10 @@ export function CustomizationProvider({ children }: { children: ReactNode }) {
       loadCustomization()
     }, 50)
 
-    let subscription: { unsubscribe: () => void } | null = null
-
-    try {
-      const supabase = createClient()
-      const { data } = supabase.auth.onAuthStateChange(() => {
-        loadCustomization()
-      })
-      subscription = data.subscription
-    } catch (error) {
-      // Silently handle subscription errors
-    }
-
     return () => {
       clearTimeout(timer)
-      subscription?.unsubscribe()
     }
-  }, [mounted])
+  }, [mounted, userId])
 
   return (
     <CustomizationContext.Provider

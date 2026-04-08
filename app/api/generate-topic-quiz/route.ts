@@ -1,15 +1,15 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/lib/auth"
+import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 import { generateText } from "ai"
+import { parseAIJsonResponse } from "@/lib/parse-ai-json"
+import { getModel } from "@/lib/ai-model"
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
-    
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-    }
+    const userId = await requireAuth()
+
+    const supabase = createServiceClient()
 
     const { topic, lawCategory, lawSection } = await request.json()
 
@@ -27,25 +27,29 @@ export async function POST(request: Request) {
     const lawsDocument = configData?.config_value || ""
 
     const { text } = await generateText({
-      model: "groq/llama-3.3-70b-versatile",
+      model: getModel(),
       system: lawsDocument
         ? `You are a football referee instructor creating a focused quiz. Reference this Laws of the Game document:\n\n${lawsDocument}`
         : "You are a football referee instructor with comprehensive knowledge of IFAB Laws of the Game 2025/26.",
-      prompt: `Create a focused 5-question quiz specifically about "${topic}" ${lawCategory ? `(${lawCategory})` : ""}.
+      maxOutputTokens: 8192,
+      prompt: `Create a focused quiz with EXACTLY 5 questions specifically about "${topic}" ${lawCategory ? `(${lawCategory})` : ""}.
 
 The questions should help a referee who is struggling with this area improve their understanding.
 
-IMPORTANT: Return ONLY valid JSON in this exact format:
+CRITICAL: You MUST generate EXACTLY 5 questions. Not 3, not 4 — exactly 5. Count them before outputting.
+
+Return ONLY valid JSON in this exact format:
 {
   "title": "Quiz title mentioning ${topic} (max 60 chars)",
   "description": "Brief description focused on ${topic}",
   "difficulty": "medium",
+  "time_limit_minutes": 10,
   "questions": [
     {
       "question_text": "Question about ${topic}",
-      "question_type": "multiple_choice",
+      "question_type": "multiple_choice" | "true_false" | "multi_select",
       "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
-      "correct_answer": "Must match one option exactly",
+      "correct_answer": ["Must match option(s) exactly"],
       "explanation": "Clear explanation citing specific Laws",
       "points_value": 5,
       "law_category": "${lawCategory || "Law 12"}",
@@ -54,22 +58,10 @@ IMPORTANT: Return ONLY valid JSON in this exact format:
   ]
 }
 
-Create exactly 5 questions that specifically target ${topic}. Each question should have a clear, educational explanation.`,
+REMEMBER: EXACTLY 5 questions. Each question must have a clear, educational explanation citing the relevant Law.`,
     })
 
-    let cleanedText = text.trim()
-    if (cleanedText.startsWith("```json")) cleanedText = cleanedText.slice(7)
-    if (cleanedText.startsWith("```")) cleanedText = cleanedText.slice(3)
-    if (cleanedText.endsWith("```")) cleanedText = cleanedText.slice(0, -3)
-    cleanedText = cleanedText.trim()
-
-    const jsonStartIndex = cleanedText.indexOf("{")
-    const jsonEndIndex = cleanedText.lastIndexOf("}")
-    if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
-      cleanedText = cleanedText.substring(jsonStartIndex, jsonEndIndex + 1)
-    }
-
-    const quizData = JSON.parse(cleanedText)
+    const quizData = parseAIJsonResponse(text) as any
 
     // Create the quiz
     const { data: newQuiz, error: quizError } = await supabase
@@ -78,13 +70,13 @@ Create exactly 5 questions that specifically target ${topic}. Each question shou
         title: quizData.title,
         description: quizData.description,
         difficulty: quizData.difficulty || "medium",
+        time_limit_minutes: quizData.questions?.length <= 5 ? 10 : quizData.questions?.length <= 10 ? 15 : 20,
         is_active: true,
       })
       .select()
       .single()
 
     if (quizError) {
-      console.error("[v0] Quiz insert error:", quizError)
       return NextResponse.json({ error: "Failed to create quiz" }, { status: 500 })
     }
 
@@ -109,13 +101,11 @@ Create exactly 5 questions that specifically target ${topic}. Each question shou
     if (questionsError) {
       // Cleanup on failure
       await supabase.from("quizzes").delete().eq("id", newQuiz.id)
-      console.error("[v0] Questions insert error:", questionsError)
       return NextResponse.json({ error: "Failed to create questions" }, { status: 500 })
     }
 
     return NextResponse.json({ success: true, quiz: newQuiz })
   } catch (error) {
-    console.error("[v0] Topic quiz generation error:", error)
     return NextResponse.json(
       { error: "Failed to generate quiz", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }

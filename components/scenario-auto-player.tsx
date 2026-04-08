@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { createClient } from "@/lib/supabase/client"
+import { getDifficultyColor, formatTime, updateLawPerformance, updateDailyStreak, updateDailyActivityLog } from "@/lib/shared-utils"
 import { useRouter } from "next/navigation"
 import { Timer, Award, ArrowLeft, ArrowRight, Loader2, X, Zap, RotateCcw } from "lucide-react"
 
@@ -63,7 +64,6 @@ export function ScenarioAutoPlayer({
   const [showCustomCelebration, setShowCustomCelebration] = useState(false)
   const [celebratingStreak, setCelebratingStreak] = useState(0)
 
-
   useEffect(() => {
     if (!isSubmitted && currentScenario) {
       const interval = setInterval(() => {
@@ -72,12 +72,6 @@ export function ScenarioAutoPlayer({
       return () => clearInterval(interval)
     }
   }, [isSubmitted, currentScenario])
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, "0")}`
-  }
 
   const fetchNextScenario = useCallback(async () => {
     setIsLoadingNext(true)
@@ -115,45 +109,6 @@ export function ScenarioAutoPlayer({
     setIsLoadingNext(false)
   }, [userId])
 
-  const updateLawPerformance = async (lawCategory: string, lawSection: string | null, isCorrect: boolean) => {
-    const supabase = createClient()
-
-    // Get current performance
-    const { data: existing } = await supabase
-      .from("user_law_performance")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("law_category", lawCategory)
-      .eq("law_section", lawSection || "")
-      .single()
-
-    if (existing) {
-      const newTotal = existing.total_attempts + 1
-      const newCorrect = existing.correct_attempts + (isCorrect ? 1 : 0)
-      const newAccuracy = (newCorrect / newTotal) * 100
-
-      await supabase
-        .from("user_law_performance")
-        .update({
-          total_attempts: newTotal,
-          correct_attempts: newCorrect,
-          accuracy: newAccuracy,
-          last_attempt_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existing.id)
-    } else {
-      await supabase.from("user_law_performance").insert({
-        user_id: userId,
-        law_category: lawCategory,
-        law_section: lawSection || "",
-        total_attempts: 1,
-        correct_attempts: isCorrect ? 1 : 0,
-        accuracy: isCorrect ? 100 : 0,
-      })
-    }
-  }
-
   const handleSubmit = async () => {
     if (!userDecision.trim() || !currentScenario) return
 
@@ -173,111 +128,31 @@ export function ScenarioAutoPlayer({
       const aiResult = await aiCheckResponse.json()
       const isCorrect = aiResult.isCorrect && aiResult.confidence >= 70
 
-      const supabase = createClient()
       const pointsEarned = isCorrect ? currentScenario.points_value : 0
 
-      // Insert scenario response
-      await supabase.from("scenario_responses").insert({
-        user_id: userId,
-        scenario_id: currentScenario.id,
-        user_decision: userDecision,
-        is_correct: isCorrect,
-        time_taken_seconds: timeElapsed,
-        points_earned: pointsEarned,
-      })
+      // Submit through API (uses service client to bypass RLS)
+      try {
+        const submitResponse = await fetch("/api/scenario-submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scenarioId: currentScenario.id,
+            userDecision,
+            isCorrect,
+            timeElapsed,
+            pointsEarned,
+            lawCategory: currentScenario.law_category,
+            lawSection: currentScenario.law_section,
+          }),
+        })
 
-      // Update law performance tracking if available
-      if (currentScenario.law_category) {
-        await updateLawPerformance(currentScenario.law_category, currentScenario.law_section || null, isCorrect)
-      }
-
-      // Update profile with streak and points
-      const { data: profile } = await supabase.from("profiles").select("*").eq("id", userId).single()
-
-      if (profile) {
-        const today = new Date().toISOString().split("T")[0]
-        const lastActivity = profile.last_activity_date
-        let newDailyStreak = profile.current_streak || 0
-        let longestDailyStreak = profile.longest_streak || 0
-        let streakContinued = false
-
-        // Daily streak logic (for any activity)
-        if (lastActivity) {
-          const lastDate = new Date(lastActivity)
-          const todayDate = new Date(today)
-          const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
-
-          if (diffDays === 1) {
-            newDailyStreak += 1
-            streakContinued = true
-          } else if (diffDays > 1) {
-            newDailyStreak = 1
-          }
-        } else {
-          newDailyStreak = 1
+        const submitResult = await submitResponse.json()
+        if (submitResult.success) {
+          setStreak(submitResult.scenarioStreak)
+          setBestStreak(submitResult.longestScenarioStreak)
         }
-
-        if (newDailyStreak > longestDailyStreak) {
-          longestDailyStreak = newDailyStreak
-        }
-
-        // Scenario streak logic (for consecutive correct answers)
-        let newScenarioStreak = profile.scenario_streak || 0
-        let longestScenarioStreak = profile.longest_scenario_streak || 0
-
-        if (isCorrect) {
-          newScenarioStreak += 1
-          if (newScenarioStreak > longestScenarioStreak) {
-            longestScenarioStreak = newScenarioStreak
-          }
-        } else {
-          newScenarioStreak = 0
-        }
-
-        setStreak(newScenarioStreak)
-        setBestStreak(longestScenarioStreak)
-
-        // Update daily activity log
-        const { data: existingLog } = await supabase
-          .from("daily_activity_log")
-          .select("*")
-          .eq("user_id", userId)
-          .eq("activity_date", today)
-          .single()
-
-        if (existingLog) {
-          await supabase
-            .from("daily_activity_log")
-            .update({
-              scenarios_completed: existingLog.scenarios_completed + 1,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", existingLog.id)
-        } else {
-          await supabase.from("daily_activity_log").insert({
-            user_id: userId,
-            activity_date: today,
-            scenarios_completed: 1,
-            quizzes_completed: 0,
-          })
-        }
-
-        await supabase
-          .from("profiles")
-          .update({
-            total_points: profile.total_points + pointsEarned,
-            current_streak: newDailyStreak,
-            longest_streak: longestDailyStreak,
-            scenario_streak: newScenarioStreak,
-            longest_scenario_streak: longestScenarioStreak,
-            last_activity_date: today,
-          })
-          .eq("id", userId)
-
-        if (streakContinued && newDailyStreak > 1) {
-          setCelebratingStreak(newDailyStreak)
-        }
-
+      } catch (submitErr) {
+        console.error("Failed to save scenario response:", submitErr)
       }
 
       setResult({
@@ -294,23 +169,9 @@ export function ScenarioAutoPlayer({
       }
 
       setRemainingCount((prev) => Math.max(0, prev - 1))
-    } catch (error) {
-      console.error("[v0] Error submitting answer:", error)
+    } catch {
     } finally {
       setIsLoadingNext(false)
-    }
-  }
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "easy":
-        return "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800"
-      case "medium":
-        return "bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400 dark:border-yellow-800"
-      case "hard":
-        return "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
-      default:
-        return "bg-muted text-muted-foreground"
     }
   }
 
@@ -338,7 +199,6 @@ export function ScenarioAutoPlayer({
         setResult(null)
       }
     } catch (error) {
-      console.error("Error generating scenario:", error)
       setGenerationError(error instanceof Error ? error.message : "Failed to generate new scenario")
     } finally {
       setIsGeneratingNew(false)
@@ -611,9 +471,9 @@ export function ScenarioAutoPlayer({
       )}
 
       {/* Celebrations */}
-      {showCustomCelebration && <CustomCelebration onClose={() => setShowCustomCelebration(false)} />}
+      {showCustomCelebration && <CustomCelebration show={showCustomCelebration} onComplete={() => setShowCustomCelebration(false)} />}
       {celebratingStreak > 0 && (
-        <StreakCelebration streak={celebratingStreak} onClose={() => setCelebratingStreak(0)} />
+        <StreakCelebration streakDays={celebratingStreak} onClose={() => setCelebratingStreak(0)} />
       )}
 
     </div>

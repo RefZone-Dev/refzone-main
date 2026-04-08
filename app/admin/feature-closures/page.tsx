@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useAuth } from "@clerk/nextjs"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,6 +34,7 @@ function getDefaultClosure(featureKey: FeatureKey): FeatureClosure {
 }
 
 export default function FeatureClosuresPage() {
+  const { userId } = useAuth()
   const [closures, setClosures] = useState<Record<string, FeatureClosure>>(() => {
     const initial: Record<string, FeatureClosure> = {}
     FEATURE_KEYS.forEach(key => {
@@ -80,10 +82,9 @@ export default function FeatureClosuresPage() {
     setMessage(null)
 
     try {
+      if (!userId) throw new Error('Not authenticated')
+
       const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) throw new Error('Not authenticated')
 
       const now = new Date().toISOString()
       const updateData: any = {
@@ -93,7 +94,7 @@ export default function FeatureClosuresPage() {
 
       // If closing the feature, set closed_by and closed_at
       if (updates.is_closed) {
-        updateData.closed_by = user.id
+        updateData.closed_by = userId
         updateData.closed_at = now
       }
 

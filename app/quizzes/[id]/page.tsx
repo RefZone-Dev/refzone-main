@@ -1,17 +1,17 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/lib/auth"
+import { createServiceClient } from "@/lib/supabase/service"
 import { redirect } from "next/navigation"
 import { QuizPlayer } from "@/components/quiz-player"
 
 export default async function QuizDetailPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient()
-  const { id } = await params
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
+  let userId: string
+  try {
+    userId = await requireAuth()
+  } catch {
     redirect("/auth/login")
   }
+  const supabase = createServiceClient()
+  const { id } = await params
 
   // Fetch quiz details
   const { data: quiz } = await supabase.from("quizzes").select("*").eq("id", id).single()
@@ -23,5 +23,5 @@ export default async function QuizDetailPage({ params }: { params: { id: string 
   // Fetch quiz questions
   const { data: questions } = await supabase.from("quiz_questions").select("*").eq("quiz_id", id).order("order_index")
 
-  return <QuizPlayer quiz={quiz} questions={questions || []} userId={user.id} />
+  return <QuizPlayer quiz={quiz} questions={questions || []} userId={userId} />
 }

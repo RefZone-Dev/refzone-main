@@ -1,5 +1,5 @@
 import type React from "react"
-import { createClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/lib/auth"
 import { NavBar } from "@/components/nav-bar"
 
 export default async function UserProfileLayout({
@@ -7,12 +7,15 @@ export default async function UserProfileLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let isLoggedIn = false
+  try {
+    await requireAuth()
+    isLoggedIn = true
+  } catch {
+    // Not logged in
+  }
 
-  if (user) {
+  if (isLoggedIn) {
     return (
       <div className="flex h-screen overflow-hidden">
         <NavBar />

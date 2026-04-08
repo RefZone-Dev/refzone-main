@@ -6,12 +6,9 @@ import {
   LayoutDashboard,
   PlayCircle,
   FileQuestion,
-  FileText,
   FlaskConical,
   Settings,
   User,
-  Trophy,
-  MessageSquare,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -20,10 +17,6 @@ const navItems = [
   { href: "/scenarios", icon: PlayCircle, label: "Scenarios", tutorialId: "scenarios-nav" },
   { href: "/quizzes", icon: FileQuestion, label: "Quizzes", tutorialId: "quizzes-nav" },
   { href: "/decision-lab", icon: FlaskConical, label: "DecisionLab", tutorialId: "decision-lab-nav" },
-]
-
-const socialItems: { href: string; icon: any; label: string; tutorialId?: string }[] = [
-  // Social section removed per user request
 ]
 
 const accountItems = [
@@ -71,36 +64,6 @@ export function SideNav() {
               </Link>
             )
           })}
-        </div>
-
-        {/* Social section */}
-        <div>
-          <p className="mb-2 px-3 text-xs font-semibold uppercase text-muted-foreground" data-tutorial="social-nav">
-            Social
-          </p>
-          <div className="space-y-1">
-            {socialItems.map((item) => {
-              const Icon = item.icon
-              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
-
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  data-tutorial={item.tutorialId}
-                  className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
-                    isActive
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
-                  {item.label}
-                </Link>
-              )
-            })}
-          </div>
         </div>
 
         {/* Account section */}

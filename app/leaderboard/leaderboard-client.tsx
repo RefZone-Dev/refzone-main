@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Trophy, UserPlus, UserCheck, Clock, Star, UserMinus, Search } from "lucide-react"
+import { Flame, UserPlus, UserCheck, Clock, UserMinus, Search } from "lucide-react"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
@@ -191,14 +191,8 @@ export function LeaderboardClient({ leaderboard, currentUserId, friendshipMap, b
                         {isCurrentUser && " (You)"}
                       </span>
                       <VerifiedBadge isVerified={user.is_verified || false} className="h-4 w-4" />
-                      {badge && (
-                        <Badge variant="secondary" className="gap-1 shrink-0">
-                          <Star className="h-3 w-3 text-amber-500" />
-                          {badge.name}
-                        </Badge>
-                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{user.current_streak} day streak</p>
+                    <p className="text-xs text-muted-foreground">Best: {user.longest_streak} days</p>
                   </div>
                 </div>
               ) : (
@@ -216,21 +210,15 @@ export function LeaderboardClient({ leaderboard, currentUserId, friendshipMap, b
                         {isCurrentUser && " (You)"}
                       </span>
                       <VerifiedBadge isVerified={user.is_verified || false} className="h-4 w-4" />
-                      {badge && (
-                        <Badge variant="secondary" className="gap-1 shrink-0">
-                          <Star className="h-3 w-3 text-amber-500" />
-                          {badge.name}
-                        </Badge>
-                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground">{user.current_streak} day streak</p>
+                    <p className="text-xs text-muted-foreground">Best: {user.longest_streak} days</p>
                   </div>
                 </Link>
               )}
 
-              <div className="text-right">
-                <p className="font-bold text-primary">{user.total_points}</p>
-                <p className="text-xs text-muted-foreground">points</p>
+              <div className="text-right flex items-center gap-1">
+                <Flame className="h-4 w-4 text-orange-500" />
+                <p className="font-bold text-primary">{user.current_streak}</p>
               </div>
 
               {currentUserId && !isCurrentUser && (

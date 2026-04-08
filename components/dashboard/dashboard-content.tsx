@@ -1,15 +1,31 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useAuth } from "@clerk/nextjs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { Target, TrendingUp, Flame, Award, Flag as Flask, BookOpen, Star, TrendingDown, Loader2 } from "lucide-react"
+import { Target, TrendingUp, Flame, BarChart3, BookOpen, Star, TrendingDown, Loader2 } from "lucide-react"
 import { DashboardWrapper } from "./dashboard-wrapper"
-import { PerformanceChart } from "./performance-chart"
+import { PerformanceChart, LawBreakdownChart } from "./performance-chart"
 import { createClient } from "@/lib/supabase/client"
 import { useTutorial } from "@/components/tutorial/tutorial-context"
+
+const LAW_NAMES: Record<string, string> = {
+  "Law 1": "The Field of Play", "Law 2": "The Ball", "Law 3": "The Players",
+  "Law 4": "The Players' Equipment", "Law 5": "The Referee", "Law 6": "The Other Match Officials",
+  "Law 7": "The Duration of the Match", "Law 8": "The Start and Restart of Play",
+  "Law 9": "The Ball In and Out of Play", "Law 10": "Determining the Outcome",
+  "Law 11": "Offside", "Law 12": "Fouls and Misconduct", "Law 13": "Free Kicks",
+  "Law 14": "The Penalty Kick", "Law 15": "The Throw-In", "Law 16": "The Goal Kick",
+  "Law 17": "The Corner Kick",
+}
+
+function getLawDisplayName(lawCategory: string, lawSection?: string): string {
+  if (lawSection && lawSection !== "") return lawSection
+  return LAW_NAMES[lawCategory] || lawCategory
+}
 
 interface DashboardContentProps {
   profile: any
@@ -21,6 +37,7 @@ interface DashboardContentProps {
   recentResponses: any[]
   totalScenarios: number
   totalQuizzes: number
+  activeDays: string[]
 }
 
 export function DashboardContent({
@@ -33,7 +50,9 @@ export function DashboardContent({
   recentResponses,
   totalScenarios,
   totalQuizzes,
+  activeDays,
 }: DashboardContentProps) {
+  const { userId: clerkUserId } = useAuth()
   const [availableQuizzes, setAvailableQuizzes] = useState<any[]>([])
   const [userQuizAttempts, setUserQuizAttempts] = useState<string[]>([])
   const [generatingQuiz, setGeneratingQuiz] = useState<string | null>(null)
@@ -75,9 +94,7 @@ export function DashboardContent({
   useEffect(() => {
     const fetchQuizzes = async () => {
       const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user) return
-      const user = session.user
+      if (!clerkUserId) return
 
       // Fetch all active quizzes with their questions to get law categories
       const { data: quizzes, error: quizError } = await supabase
@@ -100,7 +117,7 @@ export function DashboardContent({
       const { data: attempts, error: attemptsError } = await supabase
         .from("quiz_attempts")
         .select("quiz_id")
-        .eq("user_id", user.id)
+        .eq("user_id", clerkUserId)
 
       
 
@@ -172,8 +189,8 @@ export function DashboardContent({
         
         if (quizzes) setAvailableQuizzes(quizzes)
       }
-    } catch (error) {
-      console.error("[v0] Error auto-generating quiz:", error)
+    } catch {
+      // Silently handle
     } finally {
       setGeneratingQuiz(null)
       setGeneratingQuizzes(prev => {
@@ -185,11 +202,16 @@ export function DashboardContent({
   }
 
   // Calculate and set weak/strong areas from law performance
+  // Show data from the very first attempt — weak = below 70%, strong = 70%+
+  // As accuracy improves past 70%, areas are removed from weak automatically
   useEffect(() => {
     if (lawPerformance.length === 0) return
-    
-    const weak = lawPerformance.filter((l) => l.accuracy < 60).slice(0, 3)
-    const strong = lawPerformance.filter((l) => l.accuracy >= 80).slice(0, 3)
+
+    const weak = lawPerformance.filter((l) => l.accuracy < 70).slice(0, 3)
+    const strong = lawPerformance
+      .filter((l) => l.accuracy >= 70)
+      .sort((a, b) => b.accuracy - a.accuracy)
+      .slice(0, 3)
 
     setWeakAreas(weak)
     setStrongAreas(strong)
@@ -214,11 +236,7 @@ export function DashboardContent({
   }, [isTutorialActive, weakAreas, availableQuizzes, userQuizAttempts, generatedQuizMap])
 
   return (
-    <DashboardWrapper
-      hasSetGoals={false}
-      currentScenarioGoal={0}
-      currentQuizGoal={0}
-    >
+    <DashboardWrapper>
 
       <div className="space-y-6 pb-8">
         {/* Welcome */}
@@ -229,45 +247,166 @@ export function DashboardContent({
           <p className="text-muted-foreground">Ready to sharpen your skills today?</p>
         </div>
 
-        {/* Row 1: 2 CTA Cards */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Scenario CTA with Streak */}
+        {/* Row 1: 2 CTA Cards — full-bleed animated backgrounds with text overlay */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Scenario CTA */}
           <Link href="/scenarios" data-tutorial="scenarios" className="block">
-            <Card className="border-2 hover:border-primary/50 transition-all hover:shadow-lg group cursor-pointer h-full">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Target className="h-6 w-6 text-primary" />
+            <Card className="border-2 hover:border-primary/50 transition-all hover:shadow-lg group cursor-pointer overflow-hidden relative">
+              <CardContent className="p-0">
+                {/* Full-card animated pitch background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-950/80 to-emerald-900/40">
+                  <svg viewBox="0 0 400 200" className="absolute inset-0 w-full h-full" fill="none" preserveAspectRatio="xMidYMid slice">
+                    <style>{`
+                      @keyframes pulse-ring{0%,100%{r:20;opacity:0.3}50%{r:28;opacity:0.08}}
+                      @keyframes drift1{0%,100%{transform:translate(0,0)}50%{transform:translate(6px,-4px)}}
+                      @keyframes drift2{0%,100%{transform:translate(0,0)}50%{transform:translate(-4px,5px)}}
+                      @keyframes drift3{0%,100%{transform:translate(0,0)}50%{transform:translate(5px,2px)}}
+                      @keyframes ball-roll{0%,100%{transform:translate(0,0)}33%{transform:translate(4px,-2px)}66%{transform:translate(-2px,2px)}}
+                      .p1{animation:drift1 4s ease-in-out infinite}
+                      .p2{animation:drift2 3.5s ease-in-out infinite}
+                      .p3{animation:drift3 5s ease-in-out infinite}
+                      .ball{animation:ball-roll 3s ease-in-out infinite}
+                      .zone{animation:pulse-ring 2.5s ease-in-out infinite}
+                    `}</style>
+                    {/* Pitch lines */}
+                    <rect x="20" y="15" width="360" height="170" rx="3" stroke="rgba(255,255,255,0.08)" strokeWidth="1.5" />
+                    <line x1="200" y1="15" x2="200" y2="185" stroke="rgba(255,255,255,0.06)" strokeWidth="1.5" />
+                    <circle cx="200" cy="100" r="30" stroke="rgba(255,255,255,0.06)" strokeWidth="1.5" />
+                    <circle cx="200" cy="100" r="2" fill="rgba(255,255,255,0.06)" />
+                    <rect x="20" y="50" width="50" height="100" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                    <rect x="330" y="50" width="50" height="100" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
+                    {/* Players */}
+                    <circle cx="140" cy="65" r="6" fill="#a855f7" opacity="0.6" className="p1" />
+                    <circle cx="150" cy="120" r="6" fill="#a855f7" opacity="0.5" className="p3" />
+                    <circle cx="240" cy="90" r="6" fill="#a855f7" opacity="0.4" className="p2" />
+                    <circle cx="280" cy="70" r="6" fill="#ec4899" opacity="0.5" className="p1" />
+                    <circle cx="170" cy="90" r="6" fill="#ec4899" opacity="0.6" className="p2" />
+                    {/* Ball */}
+                    <circle cx="160" cy="85" r="4" fill="white" opacity="0.8" className="ball" />
+                    {/* Decision zone */}
+                    <circle cx="160" cy="85" r="20" stroke="#a855f7" strokeWidth="1" strokeDasharray="4 3" opacity="0.25" className="zone" />
+                    {/* Referee */}
+                    <circle cx="190" cy="115" r="5" fill="#fbbf24" opacity="0.5" className="p3" />
+                  </svg>
+                </div>
+                {/* Text overlay */}
+                <div className="relative z-10 p-5 flex items-end justify-between min-h-[120px]">
+                  <div>
+                    <h3 className="font-bold text-white text-lg drop-shadow-sm">Scenarios</h3>
+                    <p className="text-xs text-white/50 mt-0.5">Practice match decisions</p>
                   </div>
-                  <div className="flex items-center gap-1 text-orange-500" data-tutorial="scenario-streak">
+                  <div className="flex items-center gap-1 text-orange-400 shrink-0" data-tutorial="scenario-streak">
                     <Flame className="h-5 w-5" />
                     <span className="font-bold">{profile.scenario_streak || 0}</span>
                   </div>
                 </div>
-                <h3 className="font-semibold text-foreground mb-1">Scenarios</h3>
-                <p className="text-sm text-muted-foreground">Practice decisions</p>
               </CardContent>
             </Card>
           </Link>
 
           {/* Quiz CTA */}
           <Link href="/quizzes" data-tutorial="quizzes" className="block">
-            <Card className="border-2 hover:border-blue-500/50 transition-all hover:shadow-lg group cursor-pointer h-full">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <BookOpen className="h-6 w-6 text-blue-500" />
+            <Card className="border-2 hover:border-blue-500/50 transition-all hover:shadow-lg group cursor-pointer overflow-hidden relative">
+              <CardContent className="p-0">
+                {/* Full-card animated quiz background */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-950/80 to-indigo-900/50">
+                  <style>{`
+                    @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+                    .q-shimmer{background:linear-gradient(90deg,rgba(255,255,255,0.02) 25%,rgba(255,255,255,0.06) 50%,rgba(255,255,255,0.02) 75%);background-size:200% 100%;animation:shimmer 3s ease-in-out infinite}
+                  `}</style>
+                  <div className="absolute inset-0 flex items-center justify-center p-6 opacity-60">
+                    <div className="w-full max-w-[280px] space-y-2.5">
+                      {/* Question skeleton */}
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full bg-blue-400/40" />
+                        <div className="h-3 flex-1 rounded-full q-shimmer" />
+                      </div>
+                      {/* Options */}
+                      {[
+                        { correct: false, delay: '0s' },
+                        { correct: false, delay: '0.2s' },
+                        { correct: true, delay: '0.4s' },
+                        { correct: false, delay: '0.6s' },
+                      ].map((opt, i) => (
+                        <div
+                          key={i}
+                          className={`flex items-center gap-2 rounded-lg px-3 py-2 ${
+                            opt.correct
+                              ? 'bg-emerald-500/15 border border-emerald-500/25'
+                              : 'bg-white/[0.03]'
+                          }`}
+                        >
+                          <div
+                            className={`h-5 w-5 rounded-full text-[9px] flex items-center justify-center font-semibold shrink-0 ${
+                              opt.correct
+                                ? 'bg-emerald-500/30 text-emerald-400'
+                                : 'bg-white/[0.06] text-white/20'
+                            }`}
+                          >
+                            {String.fromCharCode(65 + i)}
+                          </div>
+                          <div
+                            className={`h-2 rounded-full flex-1 ${opt.correct ? 'bg-emerald-500/25' : 'q-shimmer'}`}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                <h3 className="font-semibold text-foreground mb-1">Quizzes</h3>
-                <p className="text-sm text-muted-foreground">Test knowledge</p>
+                {/* Text overlay */}
+                <div className="relative z-10 p-5 flex items-end min-h-[120px]">
+                  <div>
+                    <h3 className="font-bold text-white text-lg drop-shadow-sm">Quizzes</h3>
+                    <p className="text-xs text-white/50 mt-0.5">Test your knowledge</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </Link>
         </div>
 
+        {/* Streak Bar — compact inline */}
+        <Card className="border">
+          <CardContent className="py-3 px-4">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5">
+                <Flame className="h-4 w-4 text-orange-500" />
+                <span className="text-lg font-bold">{profile.current_streak || 0}</span>
+                <span className="text-xs text-muted-foreground">day streak</span>
+              </div>
+              <div className="h-4 w-px bg-border" />
+              {/* Last 7 days dots */}
+              <div className="flex items-center gap-1.5 flex-1">
+                {(() => {
+                  const activeDaysSet = new Set(activeDays)
+                  const todayStr = new Date().toISOString().split("T")[0]
+                  return Array.from({ length: 7 }, (_, i) => {
+                    const d = new Date()
+                    d.setDate(d.getDate() - (6 - i))
+                    const dateStr = d.toISOString().split("T")[0]
+                    const isActive = activeDaysSet.has(dateStr)
+                    const isToday = dateStr === todayStr
+                    const dayLabel = d.toLocaleDateString("en-US", { weekday: "narrow" })
+                    return (
+                      <div key={i} className="flex flex-col items-center gap-0.5 flex-1">
+                        <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-medium ${
+                          isToday ? "bg-purple-500 text-white" : isActive ? "bg-purple-500/30 text-purple-400" : "bg-muted/50 text-muted-foreground/50"
+                        }`}>
+                          {isActive && !isToday ? <Flame className="h-2.5 w-2.5" /> : dayLabel}
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+              <div className="h-4 w-px bg-border" />
+              <span className="text-xs text-muted-foreground">Best: <span className="font-semibold text-foreground">{profile.longest_streak || 0}</span></span>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Row 2: Recommendations & Performance Stats */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-6 items-start">
           {/* Recommendations & Insights */}
           <Card className="border-2" data-tutorial="insights-section">
             <CardHeader className="pb-3">
@@ -311,8 +450,8 @@ export function DashboardContent({
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex flex-col min-w-0">
-                            <span className="text-sm font-medium">{area.law_section || area.law_category}</span>
-                            {area.law_section && <span className="text-xs text-muted-foreground">{area.law_category}</span>}
+                            <span className="text-sm font-medium">{getLawDisplayName(area.law_category, area.law_section)}</span>
+                            <span className="text-xs text-muted-foreground">{area.law_category}</span>
                           </div>
                           <Badge variant="outline" className="text-red-500 border-red-500/50 w-fit text-xs">
                             {Math.round(area.accuracy)}%
@@ -335,13 +474,28 @@ export function DashboardContent({
                               </Link>
                             </Button>
                           ))}
-                          
+
                           {/* Show loading while generating */}
                           {isGenerating && quizzesToShow.length === 0 && (
                             <span className="flex items-center text-xs text-muted-foreground">
                               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                               Creating quiz...
                             </span>
+                          )}
+
+                          {/* Fallback: link to quizzes page filtered by this law */}
+                          {quizzesToShow.length === 0 && !isGenerating && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs bg-transparent hover:bg-red-500/10"
+                              asChild
+                            >
+                              <Link href={`/quizzes?search=${encodeURIComponent(area.law_category)}`}>
+                                <BookOpen className="h-3 w-3 mr-1" />
+                                Practice {area.law_category}
+                              </Link>
+                            </Button>
                           )}
                         </div>
                       </div>
@@ -362,8 +516,8 @@ export function DashboardContent({
                       className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-2 rounded bg-green-500/10 gap-1 sm:gap-2"
                     >
                       <div className="flex flex-col min-w-0">
-                        <span className="text-sm font-medium">{area.law_section || area.law_category}</span>
-                        {area.law_section && <span className="text-xs text-muted-foreground">{area.law_category}</span>}
+                        <span className="text-sm font-medium">{getLawDisplayName(area.law_category, area.law_section)}</span>
+                        <span className="text-xs text-muted-foreground">{area.law_category}</span>
                       </div>
                       <Badge variant="outline" className="text-green-500 border-green-500/50 w-fit text-xs">
                         {Math.round(area.accuracy)}%
@@ -375,7 +529,7 @@ export function DashboardContent({
 
               {displayWeakAreas.length === 0 && displayStrongAreas.length === 0 && (
                 <p className="text-center text-muted-foreground py-4">
-                  Complete more scenarios to get personalized recommendations.
+                  Complete a quiz or scenario to get personalised recommendations.
                 </p>
               )}
             </CardContent>
@@ -385,7 +539,7 @@ export function DashboardContent({
           <Card className="border-2">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-3">
-                <Award className="h-5 w-5 text-yellow-500" />
+                <BarChart3 className="h-5 w-5 text-purple-500" />
                 <CardTitle className="text-lg">Performance Stats</CardTitle>
               </div>
             </CardHeader>
@@ -415,6 +569,22 @@ export function DashboardContent({
           </Card>
         </div>
 
+        {/* Row 3: Law-by-law breakdown */}
+        <Card className="border-2">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <Target className="h-5 w-5 text-pink-500" />
+              <CardTitle className="text-lg">Law-by-Law Breakdown</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <LawBreakdownChart
+              data={lawPerformance}
+              availableQuizzes={displayAvailableQuizzes}
+              userQuizAttempts={userQuizAttempts}
+            />
+          </CardContent>
+        </Card>
 
       </div>
     </DashboardWrapper>

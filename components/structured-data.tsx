@@ -7,7 +7,7 @@ export function StructuredData() {
     name: 'RefZone',
     url: siteUrl,
     logo: `${siteUrl}/placeholder-logo.png`,
-    description: 'AI-powered football referee training platform with quizzes, scenarios, and expert analysis.',
+    description: 'Advanced football referee training platform with quizzes, scenarios, and expert analysis.',
     sameAs: [
       // Add social media links when available
     ],
@@ -23,7 +23,7 @@ export function StructuredData() {
     '@type': 'WebSite',
     name: 'RefZone',
     url: siteUrl,
-    description: 'Master the Laws of the Game with AI-powered scenarios, quizzes, and expert analysis.',
+    description: 'Master the Laws of the Game with algorithm-driven scenarios, quizzes, and expert analysis.',
     potentialAction: {
       '@type': 'SearchAction',
       target: {

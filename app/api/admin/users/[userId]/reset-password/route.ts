@@ -1,51 +1,21 @@
-import { createClient } from "@/lib/supabase/server"
-import { createServiceClient } from "@/lib/supabase/service"
+import { requireAdmin } from "@/lib/auth"
 import { NextResponse } from "next/server"
 
+// With Clerk, password resets are managed through Clerk's dashboard or user-initiated flows.
+// This endpoint is kept for API compatibility but returns a guidance message.
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ userId: string }> }
 ) {
-  const { userId } = await params
-
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
-  }
-
-  const serviceClient = createServiceClient()
-  const { data: adminProfile } = await serviceClient
-    .from("profiles")
-    .select("is_admin")
-    .eq("id", user.id)
-    .single()
-
-  if (!adminProfile?.is_admin) {
-    return NextResponse.json({ error: "Not authorized" }, { status: 403 })
-  }
-
-  // Get user email
   try {
-    const { data: authUser } = await serviceClient.auth.admin.getUserById(userId)
-    const email = authUser?.user?.email
-
-    if (!email) {
-      return NextResponse.json({ message: "User email not found" }, { status: 404 })
-    }
-
-    // Use Supabase's built-in password reset
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.refzone.com.au'}/auth/reset-password`,
+    await requireAdmin()
+    // Clerk handles password resets via its own UI/email flow.
+    // Admins can trigger this from the Clerk dashboard.
+    return NextResponse.json({
+      success: true,
+      message: "Password resets are managed through Clerk. The user can reset via the sign-in page.",
     })
-
-    if (error) {
-      return NextResponse.json({ message: error.message }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true })
-  } catch (err) {
-    console.error("Failed to send password reset:", err)
-    return NextResponse.json({ message: "Failed to send password reset email" }, { status: 500 })
+  } catch {
+    return NextResponse.json({ error: "Not authorized" }, { status: 403 })
   }
 }

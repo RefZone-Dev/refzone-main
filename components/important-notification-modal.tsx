@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useAuth } from "@clerk/nextjs"
 import { createClient } from "@/lib/supabase/client"
 import {
   Dialog,
@@ -21,50 +22,46 @@ interface ImportantNotification {
 }
 
 export function ImportantNotificationModal() {
+  const { userId } = useAuth()
   const [notification, setNotification] = useState<ImportantNotification | null>(null)
   const [open, setOpen] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
   const router = useRouter()
 
   useEffect(() => {
-    const init = async () => {
-      const supabase = createClient()
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        setUserId(user.id)
-        checkForImportantNotifications(user.id)
-      }
+    if (userId) {
+      checkForImportantNotifications(userId)
     }
-    init()
-  }, [])
+  }, [userId])
 
   const checkForImportantNotifications = async (uid: string) => {
-    const supabase = createClient()
+    try {
+      const supabase = createClient()
 
-    const { data: seenData } = await supabase
-      .from("user_seen_important_notifications")
-      .select("notification_id")
-      .eq("user_id", uid)
+      const { data: seenData } = await supabase
+        .from("user_seen_important_notifications")
+        .select("notification_id")
+        .eq("user_id", uid)
 
-    const seenIds = seenData?.map((s) => s.notification_id) || []
+      const seenIds = seenData?.map((s) => s.notification_id) || []
 
-    // Query admin_notifications instead (no user_id filtering needed for global notifications)
-    let query = supabase
-      .from("admin_notifications")
-      .select("id, title, message")
-      .order("created_at", { ascending: false })
-      .limit(1)
+      let query = supabase
+        .from("admin_notifications")
+        .select("id, title, message")
+        .order("created_at", { ascending: false })
+        .limit(1)
 
-    if (seenIds.length > 0) {
-      query = query.not("id", "in", `(${seenIds.join(",")})`)
-    }
+      if (seenIds.length > 0) {
+        query = query.not("id", "in", `(${seenIds.join(",")})`)
+      }
 
-    const { data: unseenNotifications, error } = await query
+      const { data: unseenNotifications } = await query
 
-    // Check if we have data (it's an array now, not single)
-    if (unseenNotifications && unseenNotifications.length > 0) {
-      setNotification(unseenNotifications[0])
-      setOpen(true)
+      if (unseenNotifications && unseenNotifications.length > 0) {
+        setNotification(unseenNotifications[0])
+        setOpen(true)
+      }
+    } catch {
+      // Table may not exist yet — silently ignore
     }
   }
 
