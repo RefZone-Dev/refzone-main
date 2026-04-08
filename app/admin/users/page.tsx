@@ -1,4 +1,5 @@
-import { createClient } from '@/lib/supabase/server'
+import { requireAuth } from '@/lib/auth'
+import { currentUser } from '@clerk/nextjs/server'
 import { createServiceClient } from '@/lib/supabase/service'
 import { redirect } from 'next/navigation'
 import { UsersTableClient } from './users-table-client'
@@ -8,22 +9,17 @@ export const metadata = {
 }
 
 export default async function UsersPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
+  let userId: string
+  try {
+    userId = await requireAuth()
+  } catch {
     redirect('/auth/login')
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile?.is_admin) {
+  const user = await currentUser()
+  const email = user?.primaryEmailAddress?.emailAddress
+  const adminEmails = ["henrytowen@googlemail.com", "refzone.office@gmail.com"]
+  if (!email || !adminEmails.includes(email)) {
     redirect('/dashboard')
   }
 
@@ -48,8 +44,8 @@ export default async function UsersPage() {
         }
       }
     }
-  } catch (err) {
-    console.error('Failed to fetch auth users:', err)
+  } catch {
+    // Auth user data unavailable - continuing with profile data only
   }
 
   // Combine profile and auth data

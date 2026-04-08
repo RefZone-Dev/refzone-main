@@ -4,8 +4,8 @@
   "description": "Master decision-making with real-game scenarios, comprehensive quizzes, and AI-powered performance analytics.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#f59e0b",
+  "background_color": "#0a0a0f",
+  "theme_color": "#b24bf3",
   "orientation": "portrait",
   "icons": [
     {

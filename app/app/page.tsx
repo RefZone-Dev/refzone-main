@@ -1,4 +1,5 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/lib/auth"
+import { createServiceClient } from "@/lib/supabase/service"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -6,16 +7,13 @@ import { Target, BookOpen, TrendingUp, Flame, Award } from "lucide-react"
 import Link from "next/link"
 
 export default async function AppDashboardPage() {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser()
-
-  if (userError || !user) {
+  let userId: string
+  try {
+    userId = await requireAuth()
+  } catch {
     redirect("/auth/login")
   }
+  const supabase = createServiceClient()
 
   let profile = null
   let scenarioCount = 0
@@ -24,10 +22,10 @@ export default async function AppDashboardPage() {
   try {
     // Fetch all data in parallel
     const [profileResult, scenarioCountResult, quizCountResult, scenarioResponsesResult] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user.id).single(),
-      supabase.from("scenario_responses").select("*", { count: "exact", head: true }).eq("user_id", user.id),
-      supabase.from("quiz_attempts").select("*", { count: "exact", head: true }).eq("user_id", user.id),
-      supabase.from("scenario_responses").select("is_correct").eq("user_id", user.id),
+      supabase.from("profiles").select("*").eq("id", userId).single(),
+      supabase.from("scenario_responses").select("*", { count: "exact", head: true }).eq("user_id", userId),
+      supabase.from("quiz_attempts").select("*", { count: "exact", head: true }).eq("user_id", userId),
+      supabase.from("scenario_responses").select("is_correct").eq("user_id", userId),
     ])
 
     profile = profileResult.data
@@ -40,8 +38,8 @@ export default async function AppDashboardPage() {
         ? Math.round((scenarioResponses.filter((r) => r.is_correct).length / scenarioResponses.length) * 100)
         : 0
 
-  } catch (error) {
-    console.error("Dashboard error:", error)
+  } catch {
+    // Dashboard data fetch failed - using default values
   }
 
   return (

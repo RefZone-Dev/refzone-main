@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useEffect, useState, useRef } from "react"
+import { useAuth } from "@clerk/nextjs"
 import { createClient } from "@/lib/supabase/client"
 import { TutorialContextProvider } from "./tutorial-context"
 import { InteractiveTutorialOverlay } from "./interactive-tutorial-overlay"
@@ -11,6 +12,7 @@ interface GlobalTutorialWrapperProps {
 }
 
 export function GlobalTutorialWrapper({ children }: GlobalTutorialWrapperProps) {
+  const { userId } = useAuth()
   const [tutorialData, setTutorialData] = useState<{
     userId: string
     tutorialCompleted: boolean
@@ -32,29 +34,31 @@ export function GlobalTutorialWrapper({ children }: GlobalTutorialWrapperProps) 
       if (fetchingRef.current) return
       fetchingRef.current = true
 
-      const { data: { session } } = await supabase.auth.getSession()
-
-      if (!session?.user) {
+      if (!userId) {
         setIsLoading(false)
         fetchingRef.current = false
         return
       }
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tutorial_completed, tutorial_step")
-        .eq("id", session.user.id)
-        .single()
+      try {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("tutorial_completed, tutorial_step")
+          .eq("id", userId)
+          .maybeSingle()
 
-      if (profile) {
-        if (profile.tutorial_completed) {
-          completedRef.current = true
+        if (profile) {
+          if (profile.tutorial_completed) {
+            completedRef.current = true
+          }
+          setTutorialData({
+            userId: userId,
+            tutorialCompleted: profile.tutorial_completed ?? false,
+            tutorialStep: profile.tutorial_step ?? 0,
+          })
         }
-        setTutorialData({
-          userId: session.user.id,
-          tutorialCompleted: profile.tutorial_completed ?? false,
-          tutorialStep: profile.tutorial_step ?? 0,
-        })
+      } catch {
+        // Columns may not exist yet — ignore
       }
       setIsLoading(false)
       fetchingRef.current = false
@@ -71,23 +75,10 @@ export function GlobalTutorialWrapper({ children }: GlobalTutorialWrapperProps) 
     }
     window.addEventListener("tutorial-completed", handleTutorialCompleted)
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event: string) => {
-      if (event === "SIGNED_IN") {
-        fetchTutorialState()
-      } else if (event === "SIGNED_OUT") {
-        completedRef.current = false
-        setTutorialData(null)
-      }
-      // Intentionally NOT re-fetching on TOKEN_REFRESHED to avoid re-triggering
-    })
-
     return () => {
-      subscription.unsubscribe()
       window.removeEventListener("tutorial-completed", handleTutorialCompleted)
     }
-  }, [])
+  }, [userId])
 
   return (
     <TutorialContextProvider

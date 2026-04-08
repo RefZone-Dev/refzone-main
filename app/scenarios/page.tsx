@@ -1,18 +1,18 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/lib/auth"
+import { createServiceClient } from "@/lib/supabase/service"
 import { redirect } from "next/navigation"
 import { ScenarioAutoPlayer } from "@/components/scenario-auto-player"
 import { checkFeatureClosure } from "@/lib/feature-closures"
 import { FeatureClosure } from "@/components/ui/feature-closure"
 
 export default async function ScenariosPage() {
-  const supabase = await createClient()
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user) {
+  let userId: string
+  try {
+    userId = await requireAuth()
+  } catch {
     redirect("/auth/login")
   }
+  const supabase = createServiceClient()
 
   // Check if scenarios are closed
   const closure = await checkFeatureClosure('scenarios')
@@ -22,9 +22,9 @@ export default async function ScenariosPage() {
 
   // Fetch all data in parallel
   const [profileResult, scenariosResult, completedResult] = await Promise.all([
-    supabase.from("profiles").select("scenario_streak, longest_scenario_streak").eq("id", user.id).single(),
+    supabase.from("profiles").select("scenario_streak, longest_scenario_streak").eq("id", userId).single(),
     supabase.from("scenarios").select("*").eq("is_active", true),
-    supabase.from("scenario_responses").select("scenario_id").eq("user_id", user.id),
+    supabase.from("scenario_responses").select("scenario_id").eq("user_id", userId),
   ])
 
   const profile = profileResult.data
@@ -46,7 +46,7 @@ export default async function ScenariosPage() {
   return (
     <ScenarioAutoPlayer
       initialScenario={firstScenario}
-      userId={user.id}
+      userId={userId}
       initialStreak={profile?.scenario_streak || 0}
       longestStreak={profile?.longest_scenario_streak || 0}
       totalUnseen={unseenScenarios.length}

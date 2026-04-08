@@ -8,8 +8,10 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { createClient } from "@/lib/supabase/client"
+import { formatTime, updateLawPerformance, updateDailyStreak, updateDailyActivityLog } from "@/lib/shared-utils"
 import { useRouter } from "next/navigation"
-import { Timer, Award, CheckCircle, XCircle, ArrowLeft, ArrowRight } from "lucide-react"
+import { Timer, Award, CheckCircle, XCircle, ArrowLeft, ArrowRight, FlaskConical } from "lucide-react"
+import Link from "next/link"
 import { Progress } from "@/components/ui/progress"
 
 import { StreakCelebration } from "@/components/streak-celebration"
@@ -108,12 +110,6 @@ export function QuizPlayer({ quiz, questions, userId }: QuizPlayerProps) {
     )
   }
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins}:${secs.toString().padStart(2, "0")}`
-  }
-
   const handleAnswerChange = (questionId: string, value: string | string[]) => {
     setAnswers((prev) => ({
       ...prev,
@@ -133,48 +129,10 @@ export function QuizPlayer({ quiz, questions, userId }: QuizPlayerProps) {
     }
   }
 
-  const updateLawPerformance = async (lawCategory: string, lawSection: string | null, isCorrect: boolean) => {
-    const supabase = createClient()
-
-    const { data: existing } = await supabase
-      .from("user_law_performance")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("law_category", lawCategory)
-      .eq("law_section", lawSection || "")
-      .single()
-
-    if (existing) {
-      const newTotal = existing.total_attempts + 1
-      const newCorrect = existing.correct_attempts + (isCorrect ? 1 : 0)
-      const newAccuracy = (newCorrect / newTotal) * 100
-
-      await supabase
-        .from("user_law_performance")
-        .update({
-          total_attempts: newTotal,
-          correct_attempts: newCorrect,
-          accuracy: newAccuracy,
-          last_attempt_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existing.id)
-    } else {
-      await supabase.from("user_law_performance").insert({
-        user_id: userId,
-        law_category: lawCategory,
-        law_section: lawSection || "",
-        total_attempts: 1,
-        correct_attempts: isCorrect ? 1 : 0,
-        accuracy: isCorrect ? 100 : 0,
-      })
-    }
-  }
-
   const handleSubmit = async () => {
     setIsLoading(true)
 
-    const supabase = createClient()
+    // Always calculate results locally first so we can show them immediately
     let totalScore = 0
     let totalPossible = 0
     const questionResults: Array<{ questionId: string; isCorrect: boolean; pointsEarned: number }> = []
@@ -183,136 +141,50 @@ export function QuizPlayer({ quiz, questions, userId }: QuizPlayerProps) {
       totalPossible += question.points_value
       const userAnswer = answers[question.id] || []
       const correctAnswer = normalizeCorrectAnswer(question.correct_answer)
-
       const isCorrect =
         userAnswer.length === correctAnswer.length &&
         userAnswer.every((ans) => correctAnswer.includes(ans)) &&
         correctAnswer.every((ans) => userAnswer.includes(ans))
-
       const pointsEarned = isCorrect ? question.points_value : 0
       totalScore += pointsEarned
-
-      questionResults.push({
-        questionId: question.id,
-        isCorrect,
-        pointsEarned,
-      })
+      questionResults.push({ questionId: question.id, isCorrect, pointsEarned })
     })
 
-    const percentage = totalPossible > 0 ? (totalScore / totalPossible) * 100 : 0
+    const percentage = totalPossible > 0 ? Math.round((totalScore / totalPossible) * 100) : 0
 
-    const { data: attempt } = await supabase
-      .from("quiz_attempts")
-      .insert({
-        user_id: userId,
-        quiz_id: quiz.id,
-        score: totalScore,
-        total_possible: totalPossible,
-        percentage: percentage,
-        time_taken_seconds: timeElapsed,
-      })
-      .select()
-      .single()
-
-    if (attempt) {
-      const answerRecords = questionResults.map((result) => ({
-        attempt_id: attempt.id,
-        question_id: result.questionId,
-        user_answer: answers[result.questionId] || [],
-        is_correct: result.isCorrect,
-        points_earned: result.pointsEarned,
-      }))
-
-      await supabase.from("quiz_answers").insert(answerRecords)
-
-      for (let i = 0; i < questions.length; i++) {
-        const question = questions[i]
-        const result = questionResults[i]
-        if (question.law_category) {
-          await updateLawPerformance(question.law_category, question.law_section || null, result.isCorrect)
-        }
-      }
-
-      const { data: profile } = await supabase.from("profiles").select("*").eq("id", userId).single()
-
-      if (profile) {
-        const today = new Date().toISOString().split("T")[0]
-        const lastActivity = profile.last_activity_date
-        let newStreak = profile.current_streak || 0
-        let longestStreak = profile.longest_streak || 0
-        let streakContinued = false
-
-        if (lastActivity) {
-          const lastDate = new Date(lastActivity)
-          const todayDate = new Date(today)
-          const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
-
-          if (diffDays === 1) {
-            newStreak += 1
-            streakContinued = true
-          } else if (diffDays > 1) {
-            newStreak = 1
-          }
-        } else {
-          newStreak = 1
-        }
-
-        if (newStreak > longestStreak) {
-          longestStreak = newStreak
-        }
-
-        const { data: existingLog } = await supabase
-          .from("daily_activity_log")
-          .select("*")
-          .eq("user_id", userId)
-          .eq("activity_date", today)
-          .single()
-
-        if (existingLog) {
-          await supabase
-            .from("daily_activity_log")
-            .update({
-              quizzes_completed: existingLog.quizzes_completed + 1,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", existingLog.id)
-        } else {
-          await supabase.from("daily_activity_log").insert({
-            user_id: userId,
-            activity_date: today,
-            scenarios_completed: 0,
-            quizzes_completed: 1,
-          })
-        }
-
-        await supabase
-          .from("profiles")
-          .update({
-            total_points: profile.total_points + totalScore,
-            current_streak: newStreak,
-            longest_streak: longestStreak,
-            last_activity_date: today,
-          })
-          .eq("id", userId)
-
-        if (streakContinued && newStreak > 1) {
-          setCelebratingStreak(newStreak)
-        }
-
-      }
-    }
-
-    setResults({
-      score: totalScore,
-      totalPossible,
-      percentage: Math.round(percentage),
-      questionResults,
-    })
+    // Show results immediately
+    setResults({ score: totalScore, totalPossible, percentage, questionResults })
     setIsCompleted(true)
     setIsLoading(false)
 
     if (percentage >= 70) {
       setShowCustomCelebration(true)
+    }
+
+    // Save to server in the background
+    try {
+      const saveResponse = await fetch("/api/quiz-submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          quizId: quiz.id,
+          answers,
+          timeElapsed,
+          questions: questions.map((q) => ({
+            id: q.id,
+            correct_answer: q.correct_answer,
+            points_value: q.points_value,
+            law_category: q.law_category,
+            law_section: q.law_section,
+          })),
+        }),
+      })
+      if (!saveResponse.ok) {
+        const errData = await saveResponse.json().catch(() => ({}))
+        console.error("Failed to save quiz results:", saveResponse.status, errData)
+      }
+    } catch (error) {
+      console.error("Failed to save quiz results:", error)
     }
   }
 
@@ -363,13 +235,14 @@ export function QuizPlayer({ quiz, questions, userId }: QuizPlayerProps) {
         <div className="space-y-3">
           <h3 className="font-semibold text-foreground">Question Breakdown</h3>
           {questions.map((question, index) => {
-            const result = results.questionResults[index]
+            const result = results.questionResults.find((r) => r.questionId === question.id) || results.questionResults[index]
             const correctAnswerArray = normalizeCorrectAnswer(question.correct_answer)
+            const isCorrect = result?.isCorrect ?? false
             return (
               <Card
                 key={question.id}
                 className={
-                  result.isCorrect
+                  isCorrect
                     ? "border-2 border-green-500 bg-green-500/10 dark:bg-green-500/10"
                     : "border-2 border-red-500 bg-red-500/10 dark:bg-red-500/10"
                 }
@@ -389,18 +262,33 @@ export function QuizPlayer({ quiz, questions, userId }: QuizPlayerProps) {
                           <span className="font-medium text-foreground">Correct answer:</span>{" "}
                           {correctAnswerArray.join(", ")}
                         </p>
-                        {!result.isCorrect && (
+                        {!isCorrect && (
                           <p className="text-muted-foreground mt-2 italic">{question.explanation}</p>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-2 h-7 text-xs text-primary hover:text-primary/80 px-2"
+                          asChild
+                        >
+                          <Link
+                            href={`/decision-lab?q=${encodeURIComponent(
+                              `I got this quiz question ${isCorrect ? 'correct' : 'wrong'}. Explain the rule in detail.\n\nQuestion: ${question.question_text}\nCorrect answer: ${correctAnswerArray.join(', ')}\nMy answer: ${answers[question.id]?.join(', ') || 'No answer'}\nExplanation given: ${question.explanation || 'None'}${question.law_category ? `\nLaw: ${question.law_category}${question.law_section ? ' — ' + question.law_section : ''}` : ''}`
+                            )}`}
+                          >
+                            <FlaskConical className="h-3 w-3 mr-1" />
+                            Learn more in Decision Lab
+                          </Link>
+                        </Button>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {result.isCorrect ? (
+                      {isCorrect ? (
                         <CheckCircle className="h-5 w-5 text-green-500" />
                       ) : (
                         <XCircle className="h-5 w-5 text-red-500" />
                       )}
-                      <span className="text-sm font-medium text-foreground">{result.pointsEarned} pts</span>
+                      <span className="text-sm font-medium text-foreground">{result?.pointsEarned || 0} pts</span>
                     </div>
                   </div>
                 </CardContent>
@@ -426,7 +314,6 @@ export function QuizPlayer({ quiz, questions, userId }: QuizPlayerProps) {
       {celebratingStreak && (
         <StreakCelebration streakDays={celebratingStreak} onClose={() => setCelebratingStreak(null)} />
       )}
-
 
       <div className="flex items-center justify-between">
         <Button variant="outline" onClick={() => router.push("/quizzes")}>
@@ -475,48 +362,70 @@ export function QuizPlayer({ quiz, questions, userId }: QuizPlayerProps) {
               onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
             >
               <div className="space-y-3">
-                {currentQuestion.options.map((option, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center space-x-3 p-4 rounded-lg border-2 hover:bg-muted/50 transition-colors"
-                  >
-                    <RadioGroupItem value={option} id={`option-${index}`} />
-                    <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer text-foreground">
-                      {option}
-                    </Label>
-                  </div>
-                ))}
+                {currentQuestion.options.map((option, index) => {
+                  const isSelected = answers[currentQuestion.id]?.[0] === option
+                  return (
+                    <label
+                      key={index}
+                      htmlFor={`option-${index}`}
+                      className={`flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                        isSelected ? "border-primary bg-primary/10" : "hover:bg-muted/50"
+                      }`}
+                    >
+                      <RadioGroupItem value={option} id={`option-${index}`} />
+                      <span className="flex-1 text-foreground text-sm">
+                        {option}
+                      </span>
+                    </label>
+                  )
+                })}
               </div>
             </RadioGroup>
           )}
 
           {currentQuestion.question_type === "multi_select" && (
             <div className="space-y-3">
-              {currentQuestion.options.map((option, index) => (
-                <div
-                  key={index}
-                  className="flex items-center space-x-3 p-4 rounded-lg border-2 hover:bg-muted/50 transition-colors"
-                >
-                  <Checkbox
-                    id={`option-${index}`}
-                    checked={answers[currentQuestion.id]?.includes(option) || false}
-                    onCheckedChange={(checked) => {
+              {currentQuestion.options.map((option, index) => {
+                const isChecked = answers[currentQuestion.id]?.includes(option) || false
+                return (
+                  <div
+                    key={index}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
                       const currentAnswers = answers[currentQuestion.id] || []
-                      if (checked) {
-                        handleAnswerChange(currentQuestion.id, [...currentAnswers, option])
+                      if (isChecked) {
+                        handleAnswerChange(currentQuestion.id, currentAnswers.filter((a) => a !== option))
                       } else {
-                        handleAnswerChange(
-                          currentQuestion.id,
-                          currentAnswers.filter((a) => a !== option),
-                        )
+                        handleAnswerChange(currentQuestion.id, [...currentAnswers, option])
                       }
                     }}
-                  />
-                  <Label htmlFor={`option-${index}`} className="flex-1 cursor-pointer text-foreground">
-                    {option}
-                  </Label>
-                </div>
-              ))}
+                    onKeyDown={(e) => {
+                      if (e.key === " " || e.key === "Enter") {
+                        e.preventDefault()
+                        const currentAnswers = answers[currentQuestion.id] || []
+                        if (isChecked) {
+                          handleAnswerChange(currentQuestion.id, currentAnswers.filter((a) => a !== option))
+                        } else {
+                          handleAnswerChange(currentQuestion.id, [...currentAnswers, option])
+                        }
+                      }
+                    }}
+                    className={`flex items-center space-x-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
+                      isChecked ? "border-primary bg-primary/10" : "hover:bg-muted/50"
+                    }`}
+                  >
+                    <Checkbox
+                      checked={isChecked}
+                      tabIndex={-1}
+                      className="pointer-events-none"
+                    />
+                    <span className="flex-1 text-foreground text-sm">
+                      {option}
+                    </span>
+                  </div>
+                )
+              })}
               <p className="text-xs text-center text-muted-foreground">Select all that apply</p>
             </div>
           )}

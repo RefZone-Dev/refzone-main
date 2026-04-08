@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useAuth, useUser } from "@clerk/nextjs"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import {
@@ -55,6 +56,8 @@ interface ForumReport {
 }
 
 export default function AdminModerationPage() {
+  const { userId } = useAuth()
+  const { user: clerkUser } = useUser()
   const [posts, setPosts] = useState<ForumPost[]>([])
   const [pendingPosts, setPendingPosts] = useState<ForumPost[]>([])
   const [reports, setReports] = useState<ForumReport[]>([])
@@ -72,22 +75,19 @@ export default function AdminModerationPage() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
+      if (!userId) {
         router.push("/auth/login")
         return
       }
 
-      const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single()
-
-      if (!profile?.is_admin) {
+      const email = clerkUser?.primaryEmailAddress?.emailAddress
+      const adminEmails = ["henrytowen@googlemail.com", "refzone.office@gmail.com"]
+      if (!email || !adminEmails.includes(email)) {
         router.push("/dashboard")
         return
       }
+
+      const supabase = createClient()
 
       // Fetch all posts
       const { data: allPosts, error: postsError } = await supabase
@@ -96,7 +96,6 @@ export default function AdminModerationPage() {
         .order("created_at", { ascending: false })
 
       if (postsError) {
-        console.error("[v0] Error fetching posts:", postsError)
         setIsLoading(false)
         return
       }
@@ -108,7 +107,7 @@ export default function AdminModerationPage() {
         .order("created_at", { ascending: false })
 
       if (reportsError) {
-        console.error("[v0] Error fetching reports:", reportsError)
+        // Reports fetch failed - continuing without reports
       }
 
       if (!allPosts || allPosts.length === 0) {
@@ -166,7 +165,7 @@ export default function AdminModerationPage() {
     }
 
     fetchData()
-  }, [router])
+  }, [router, clerkUser])
 
   const approvePost = async (postId: string) => {
     const supabase = createClient()
@@ -176,7 +175,6 @@ export default function AdminModerationPage() {
       .eq("id", postId)
 
     if (error) {
-      console.error("[v0] Error approving post:", error)
       setModal({
         isOpen: true,
         type: "error",
@@ -213,7 +211,6 @@ export default function AdminModerationPage() {
         const { error } = await supabase.from("forum_posts").delete().eq("id", postId)
 
         if (error) {
-          console.error("[v0] Error deleting post:", error)
           setModal({
             isOpen: true,
             type: "error",
@@ -265,15 +262,12 @@ export default function AdminModerationPage() {
 
   const dismissReport = async (reportId: string) => {
     const supabase = createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
 
     const { error } = await supabase
       .from("forum_reports")
       .update({
         status: "dismissed",
-        reviewed_by: user?.id,
+        reviewed_by: userId,
         reviewed_at: new Date().toISOString(),
       })
       .eq("id", reportId)
@@ -307,9 +301,6 @@ export default function AdminModerationPage() {
       message: "This will delete the reported post permanently. Continue?",
       onConfirm: async () => {
         const supabase = createClient()
-        const {
-          data: { user },
-        } = await supabase.auth.getUser()
 
         // Delete the post
         await supabase.from("forum_posts").delete().eq("id", postId)
@@ -319,7 +310,7 @@ export default function AdminModerationPage() {
           .from("forum_reports")
           .update({
             status: "reviewed",
-            reviewed_by: user?.id,
+            reviewed_by: userId,
             reviewed_at: new Date().toISOString(),
           })
           .eq("id", reportId)

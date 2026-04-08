@@ -47,8 +47,7 @@ export function UserEditModal({ userId, open, onOpenChange, onUpdate }: UserEdit
         total_points: data.total_points || 0,
         current_streak: data.current_streak || 0,
       })
-    } catch (error) {
-      console.error('Failed to fetch user data:', error)
+    } catch {
       toast.error('Failed to load user data')
     }
   }

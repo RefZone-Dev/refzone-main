@@ -3,18 +3,18 @@ import type { Metadata } from "next"
 
 import "./globals.css"
 
+import { ClerkProvider } from "@clerk/nextjs"
 import { ThemeProvider } from "@/components/theme-provider"
 import { CustomizationProvider } from "@/lib/customization-context"
 import { ImportantNotificationModal } from "@/components/important-notification-modal"
 import { GlobalTutorialWrapper } from "@/components/tutorial/global-tutorial-wrapper"
-import { PhoneNumberPrompt } from "@/components/phone-number-prompt"
 import { StructuredData } from "@/components/structured-data"
-import DevToolbar from "@/components/DevToolbar"
 import { Toaster } from "@/components/ui/sonner"
 
-import { Geist } from 'next/font/google'
+import { Geist, Inter } from 'next/font/google'
 
 const geistSans = Geist({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.refzone.com.au'
 
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: "RefZone",
   description:
-    "Master decision-making with real-game scenarios, comprehensive quizzes, and AI-powered performance analytics. Supporting referees across Australia with 500+ quiz questions, 100+ scenarios, and 24/7 AI assistant.",
+    "Master decision-making with real-game scenarios, comprehensive quizzes, and advanced performance analytics. Supporting referees across Australia with 500+ quiz questions, 100+ scenarios, and 24/7 training assistant.",
   keywords: [
     "referee training",
     "football referee",
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     "LOTG",
     "referee quiz",
     "referee scenarios",
-    "referee AI",
+    "referee tools",
     "match official training",
     "Australian referee",
     "referee development",
@@ -63,8 +63,8 @@ export const metadata: Metadata = {
     locale: "en_AU",
     url: siteUrl,
     siteName: "RefZone",
-    title: "RefZone - AI-Powered Football Referee Training",
-    description: "Master the Laws of the Game with AI-powered scenarios, quizzes, and expert analysis. Join hundreds of referees improving their skills every day.",
+    title: "RefZone - Football Referee Training Platform",
+    description: "Master the Laws of the Game with algorithm-driven scenarios, quizzes, and expert analysis. Join hundreds of referees improving their skills every day.",
     images: [
       {
         url: `${siteUrl}/og-image.jpg`,
@@ -76,8 +76,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "RefZone - AI-Powered Football Referee Training",
-    description: "Master the Laws of the Game with AI-powered scenarios, quizzes, and expert analysis.",
+    title: "RefZone - Football Referee Training Platform",
+    description: "Master the Laws of the Game with algorithm-driven scenarios, quizzes, and expert analysis.",
     images: [`${siteUrl}/og-image.jpg`],
     creator: "@refzone",
   },
@@ -110,18 +110,16 @@ export default function RootLayout({
       <head>
         <StructuredData />
       </head>
-      <body className={`font-sans antialiased ${geistSans.className}`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <CustomizationProvider>
-            <GlobalTutorialWrapper>{children}</GlobalTutorialWrapper>
-            <ImportantNotificationModal />
-            <PhoneNumberPrompt />
-            <Toaster />
-          </CustomizationProvider>
-        </ThemeProvider>
-
-        {/* Placing the Toolbar at the end of the body to avoid hydration errors */}
-        <DevToolbar />
+      <body className={`font-sans antialiased ${geistSans.className} ${inter.variable}`}>
+        <ClerkProvider>
+          <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+            <CustomizationProvider>
+              <GlobalTutorialWrapper>{children}</GlobalTutorialWrapper>
+              <ImportantNotificationModal />
+              <Toaster />
+            </CustomizationProvider>
+          </ThemeProvider>
+        </ClerkProvider>
       </body>
     </html>
   )

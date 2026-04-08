@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { createClient } from "@/lib/supabase/client"
-import { Loader2, Info, Moon, Sun, Monitor, User, Mail, Shield, AlertTriangle, Pencil, X } from "lucide-react"
+import { useAuth, useUser, useClerk, useSession } from "@clerk/nextjs"
+import { Loader2, Info, Moon, Sun, Monitor, User, Mail, Shield, AlertTriangle, Pencil, X, Link2, Smartphone, LogOut, ShieldCheck } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { CustomModal } from "@/components/custom-modal"
 import { Alert, AlertDescription } from "@/components/ui/alert"
@@ -25,12 +27,22 @@ import {
 export default function SettingsPage() {
   const [userId, setUserId] = useState<string | null>(null)
   const [email, setEmail] = useState("")
+  const [originalEmail, setOriginalEmail] = useState("")
+  const [isEditingEmail, setIsEditingEmail] = useState(false)
+  const [firstName, setFirstName] = useState("")
+  const [originalFirstName, setOriginalFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
+  const [originalLastName, setOriginalLastName] = useState("")
+  const [isEditingName, setIsEditingName] = useState(false)
   const [username, setUsername] = useState("")
   const [originalUsername, setOriginalUsername] = useState("")
   const [isEditingUsername, setIsEditingUsername] = useState(false)
   const [isCheckingName, setIsCheckingName] = useState(false)
   const [nameAvailable, setNameAvailable] = useState<boolean | null>(null)
-  
+  const [profileImage, setProfileImage] = useState<string | null>(null)
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
   // Password change
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
@@ -51,6 +63,13 @@ export default function SettingsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   
+  // Connected accounts & sessions
+  const [connectedAccounts, setConnectedAccounts] = useState<any[]>([])
+  const [activeSessions, setActiveSessions] = useState<any[]>([])
+  const [isSigningOut, setIsSigningOut] = useState<string | null>(null)
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
+  const [isTogglingTwoFactor, setIsTogglingTwoFactor] = useState(false)
+
   // Unsaved changes tracking
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [showUnsavedModal, setShowUnsavedModal] = useState(false)
@@ -63,8 +82,10 @@ export default function SettingsPage() {
   // Check for unsaved changes
   useEffect(() => {
     const usernameChanged = isEditingUsername && username !== originalUsername
-    setHasUnsavedChanges(usernameChanged)
-  }, [username, originalUsername, isEditingUsername])
+    const nameChanged = isEditingName && (firstName !== originalFirstName || lastName !== originalLastName)
+    const emailChanged = isEditingEmail && email !== originalEmail
+    setHasUnsavedChanges(usernameChanged || nameChanged || emailChanged)
+  }, [username, originalUsername, isEditingUsername, firstName, originalFirstName, lastName, originalLastName, isEditingName, email, originalEmail, isEditingEmail])
 
   // Handle browser back/navigation with unsaved changes
   useEffect(() => {
@@ -102,35 +123,42 @@ export default function SettingsPage() {
     return () => document.removeEventListener("click", handleClick, true)
   }, [hasUnsavedChanges])
 
+  const { userId: clerkUserId, signOut } = useAuth()
+  const { user: clerkUser } = useUser()
+  const clerk = useClerk()
+  const { session: currentSession } = useSession()
+
   useEffect(() => {
-    const fetchUserAndSettings = async () => {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
+    if (!clerkUserId) return
 
-      if (!user) {
-        router.push("/auth/login")
-        return
-      }
+    setUserId(clerkUserId)
+    const emailAddr = clerkUser?.primaryEmailAddress?.emailAddress || ""
+    setEmail(emailAddr)
+    setOriginalEmail(emailAddr)
+    setFirstName(clerkUser?.firstName || "")
+    setOriginalFirstName(clerkUser?.firstName || "")
+    setLastName(clerkUser?.lastName || "")
+    setOriginalLastName(clerkUser?.lastName || "")
+    setProfileImage(clerkUser?.imageUrl || null)
+    setConnectedAccounts(clerkUser?.externalAccounts || [])
+    setTwoFactorEnabled((clerkUser?.twoFactorEnabled) || false)
 
-      setUserId(user.id)
-      setEmail(user.email || "")
+    // Load active sessions via Clerk client
+    clerk.client?.sessions && setActiveSessions(clerk.client.sessions || [])
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("display_name")
-        .eq("id", user.id)
-        .single()
-
-      if (profile) {
-        setUsername(profile.display_name || "")
-        setOriginalUsername(profile.display_name || "")
-      }
-    }
-
-    fetchUserAndSettings()
-  }, [router])
+    const supabase = createClient()
+    supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", clerkUserId)
+      .single()
+      .then(({ data: profile }) => {
+        if (profile) {
+          setUsername(profile.display_name || "")
+          setOriginalUsername(profile.display_name || "")
+        }
+      })
+  }, [clerkUserId, clerkUser])
 
   // Only check username availability when editing
   useEffect(() => {
@@ -149,8 +177,7 @@ export default function SettingsPage() {
         })
         const data = await response.json()
         setNameAvailable(data.available)
-      } catch (error) {
-        console.error("Error checking username:", error)
+      } catch {
         setNameAvailable(null)
       } finally {
         setIsCheckingName(false)
@@ -194,22 +221,103 @@ export default function SettingsPage() {
     setIsChangingPassword(true)
 
     try {
-      const supabase = createClient()
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
+      // Clerk handles password changes through its user profile
+      await clerkUser?.updatePassword({
+        currentPassword,
+        newPassword,
       })
-
-      if (error) throw error
 
       showModal("success", "Password Changed", "Your password has been changed successfully!")
       setCurrentPassword("")
       setNewPassword("")
       setConfirmPassword("")
     } catch (error: any) {
-      console.error("Error changing password:", error)
-      showModal("error", "Password Change Failed", error.message || "Failed to change password. Please try again.")
+      showModal("error", "Password Change Failed", error?.errors?.[0]?.message || error.message || "Failed to change password. Please try again.")
     } finally {
       setIsChangingPassword(false)
+    }
+  }
+
+  const handleUpdateName = async () => {
+    try {
+      await clerkUser?.update({
+        firstName: firstName,
+        lastName: lastName,
+      })
+      setOriginalFirstName(firstName)
+      setOriginalLastName(lastName)
+      setIsEditingName(false)
+      showModal("success", "Name Updated", "Your name has been updated successfully.")
+    } catch (error: any) {
+      showModal("error", "Update Failed", error?.errors?.[0]?.message || "Failed to update name.")
+    }
+  }
+
+  const handleUpdateEmail = async () => {
+    try {
+      const emailAddress = await clerkUser?.createEmailAddress({ email })
+      if (emailAddress) {
+        await clerkUser?.update({ primaryEmailAddressId: emailAddress.id } as any)
+      }
+      setOriginalEmail(email)
+      setIsEditingEmail(false)
+      showModal("success", "Email Updated", "Your email has been updated. You may need to verify it.")
+    } catch (error: any) {
+      showModal("error", "Update Failed", error?.errors?.[0]?.message || "Failed to update email.")
+    }
+  }
+
+  const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsUploadingImage(true)
+    try {
+      await clerkUser?.setProfileImage({ file })
+      setProfileImage(clerkUser?.imageUrl || null)
+      showModal("success", "Photo Updated", "Your profile photo has been updated.")
+    } catch (error: any) {
+      showModal("error", "Upload Failed", error?.errors?.[0]?.message || "Failed to upload photo.")
+    } finally {
+      setIsUploadingImage(false)
+    }
+  }
+
+  const handleRemoveImage = async () => {
+    setIsUploadingImage(true)
+    try {
+      await clerkUser?.setProfileImage({ file: null })
+      setProfileImage(null)
+      showModal("success", "Photo Removed", "Your profile photo has been removed.")
+    } catch (error: any) {
+      showModal("error", "Remove Failed", error?.errors?.[0]?.message || "Failed to remove photo.")
+    } finally {
+      setIsUploadingImage(false)
+    }
+  }
+
+  const handleConnectGoogle = async () => {
+    try {
+      // Redirect to Clerk's OAuth flow
+      window.location.href = `/auth/callback?strategy=oauth_google`
+    } catch (error: any) {
+      showModal("error", "Connection Failed", error?.message || "Failed to connect Google account.")
+    }
+  }
+
+  const handleRevokeSession = async (sessionId: string) => {
+    setIsSigningOut(sessionId)
+    try {
+      const session = clerk.client?.sessions?.find((s: any) => s.id === sessionId)
+      if (session) {
+        await session.end()
+        setActiveSessions((prev) => prev.filter((s: any) => s.id !== sessionId))
+        showModal("success", "Session Ended", "The device has been signed out.")
+      }
+    } catch (error: any) {
+      showModal("error", "Sign Out Failed", error?.errors?.[0]?.message || error?.message || "Failed to end session.")
+    } finally {
+      setIsSigningOut(null)
     }
   }
 
@@ -242,7 +350,6 @@ export default function SettingsPage() {
       setHasUnsavedChanges(false)
       showModal("success", "Settings Saved", "Your settings have been saved successfully!")
     } catch (error: any) {
-      console.error("Error saving settings:", error)
       if (error.code === "23505") {
         showModal("error", "Username Taken", "This username is already in use. Please choose another.")
       } else {
@@ -297,12 +404,10 @@ export default function SettingsPage() {
       showModal("success", "Account Deleted", "Your account has been successfully deleted. Redirecting...")
 
       setTimeout(async () => {
-        const supabase = createClient()
-        await supabase.auth.signOut()
+        await signOut()
         router.push("/")
       }, 1500)
     } catch (error) {
-      console.error("Error deleting account:", error)
       showModal(
         "error",
         "Delete Failed",
@@ -389,16 +494,102 @@ export default function SettingsPage() {
           </div>
           <CardDescription>Manage your account details</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-6">
+          {/* Profile Photo */}
           <div className="space-y-2">
-            <Label htmlFor="email">Email Address</Label>
-            <div className="flex items-center gap-2">
-              <Input id="email" type="email" value={email} disabled className="bg-muted" />
-              <Mail className="h-4 w-4 text-muted-foreground" />
+            <Label>Profile Photo</Label>
+            <div className="flex items-center gap-4">
+              <div className="relative h-16 w-16 rounded-full overflow-hidden bg-muted flex items-center justify-center">
+                {profileImage ? (
+                  <img src={profileImage} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <User className="h-8 w-8 text-muted-foreground" />
+                )}
+                {isUploadingImage && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <Loader2 className="h-5 w-5 animate-spin text-white" />
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleUploadImage} className="hidden" />
+                <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isUploadingImage} className="bg-transparent">
+                  Change
+                </Button>
+                {profileImage && (
+                  <Button variant="ghost" size="sm" onClick={handleRemoveImage} disabled={isUploadingImage} className="text-muted-foreground">
+                    Remove
+                  </Button>
+                )}
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">Email cannot be changed</p>
           </div>
 
+          {/* Name */}
+          <div className="space-y-2">
+            <Label>Name</Label>
+            {isEditingName ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Input
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="First name"
+                  />
+                  <Input
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Last name"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleUpdateName}>Save name</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setFirstName(originalFirstName); setLastName(originalLastName); setIsEditingName(false) }}>Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Input value={[firstName, lastName].filter(Boolean).join(" ") || "Not set"} disabled className="bg-muted" />
+                <Button variant="ghost" size="icon" onClick={() => setIsEditingName(true)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Email */}
+          <div className="space-y-2">
+            <Label htmlFor="email">Email Address</Label>
+            {isEditingEmail ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter email"
+                  />
+                  <Button variant="ghost" size="icon" onClick={() => { setEmail(originalEmail); setIsEditingEmail(false) }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleUpdateEmail}>Update email</Button>
+                </div>
+                <p className="text-xs text-muted-foreground">You may need to verify your new email address</p>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Input id="email" type="email" value={email} disabled className="bg-muted" />
+                <Button variant="ghost" size="icon" onClick={() => setIsEditingEmail(true)}>
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Username */}
           <div className="space-y-2">
             <Label htmlFor="username">Username</Label>
             {isEditingUsername ? (
@@ -507,6 +698,131 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
+      {/* Connected Accounts */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Link2 className="h-5 w-5" />
+            <CardTitle>Connected Accounts</CardTitle>
+          </div>
+          <CardDescription>Manage your linked social accounts</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {connectedAccounts.length > 0 ? (
+            connectedAccounts.map((account: any) => (
+              <div key={account.id} className="flex items-center justify-between p-3 rounded-lg border">
+                <div className="flex items-center gap-3">
+                  {account.imageUrl && (
+                    <img src={account.imageUrl} alt="" className="h-8 w-8 rounded-full" />
+                  )}
+                  <div>
+                    <p className="text-sm font-medium capitalize">{account.provider || "Unknown"}</p>
+                    <p className="text-xs text-muted-foreground">{account.emailAddress || account.username || ""}</p>
+                  </div>
+                </div>
+                <Badge variant="outline" className="text-green-600 border-green-600/50">Connected</Badge>
+              </div>
+            ))
+          ) : (
+            <p className="text-sm text-muted-foreground">No connected accounts</p>
+          )}
+          <Button variant="outline" size="sm" onClick={handleConnectGoogle} className="bg-transparent">
+            <svg className="h-4 w-4 mr-2" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            Connect Google
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Active Sessions */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Smartphone className="h-5 w-5" />
+            <CardTitle>Active Sessions</CardTitle>
+          </div>
+          <CardDescription>Manage devices signed into your account</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {activeSessions.length > 0 ? (
+            activeSessions.map((session: any) => {
+              const isCurrent = currentSession?.id === session.id
+              const lastActive = session.lastActiveAt ? new Date(session.lastActiveAt).toLocaleDateString("en-AU", {
+                day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit"
+              }) : "Unknown"
+              return (
+                <div key={session.id} className="flex items-center justify-between p-3 rounded-lg border">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium">
+                        {session.latestActivity?.deviceType || "Unknown device"}
+                      </p>
+                      {isCurrent && <Badge variant="outline" className="text-green-600 border-green-600/50 text-[10px]">Current</Badge>}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Last active: {lastActive}
+                    </p>
+                  </div>
+                  {!isCurrent && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRevokeSession(session.id)}
+                      disabled={isSigningOut === session.id}
+                      className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                    >
+                      {isSigningOut === session.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <><LogOut className="h-3.5 w-3.5 mr-1" /> Sign out</>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              )
+            })
+          ) : (
+            <p className="text-sm text-muted-foreground">No active sessions found</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Two-Factor Authentication */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5" />
+            <CardTitle>Two-Factor Authentication</CardTitle>
+          </div>
+          <CardDescription>Add an extra layer of security to your account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">{twoFactorEnabled ? "Enabled" : "Disabled"}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {twoFactorEnabled
+                  ? "Your account is protected with two-factor authentication"
+                  : "Protect your account by requiring a second verification step"}
+              </p>
+            </div>
+            <Badge variant={twoFactorEnabled ? "default" : "outline"} className={twoFactorEnabled ? "bg-green-600" : ""}>
+              {twoFactorEnabled ? "On" : "Off"}
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mt-4">
+            To {twoFactorEnabled ? "manage" : "enable"} two-factor authentication, use the Clerk account portal.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2 bg-transparent"
+            onClick={() => clerk.openUserProfile({ appearance: { elements: { rootBox: { width: "100%" } } } })}
+          >
+            {twoFactorEnabled ? "Manage 2FA" : "Set up 2FA"}
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -550,9 +866,6 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
-          {mounted && theme === "dark" && (
-            <p className="text-sm text-muted-foreground italic mt-2">Dark mode for Liam</p>
-          )}
         </CardContent>
       </Card>
 

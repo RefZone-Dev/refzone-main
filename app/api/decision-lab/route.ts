@@ -1,4 +1,5 @@
 import { generateText } from "ai"
+import { getModel } from "@/lib/ai-model"
 
 const SYSTEM_PROMPT = `You are an expert football referee and Laws of the Game (LOTG) instructor. Your role is to help referees analyze match scenarios based on IFAB Laws of the Game 2025/26.
 
@@ -14,13 +15,24 @@ CLARIFYING QUESTIONS MODE:
 - Keep questions concise: "Was the ball in playing distance?" "Did the challenge make contact with the ball first?"
 
 ANSWER MODE (only when you have all facts):
-- Provide the decision in 1-2 short paragraphs
-- Include specific Law references (e.g., "Law 12.1 states...")
-- State the restart and any disciplinary action
-- Be direct and concise
+- Start with the key decision in **bold** (e.g. "**Direct free kick + yellow card.**")
+- Include specific Law references (e.g. "Law 12.1 states...")
+- Use **bold** for key terms and decisions
+- Use *italics* for emphasis
+- End with a brief summary line starting with "Summary:" or "Verdict:"
+- Keep responses concise — 2-3 short paragraphs max
+- Use bullet points (- ) for listing multiple factors
 
-Example of good response length:
-"Based on the facts, this is a direct free kick offense under Law 12 - the defender tripped the opponent carelessly. Since it occurred outside the penalty area, award a direct free kick to the attacking team. No card is required as the challenge was careless, not reckless."
+Example format:
+"**Direct free kick — no card required.**
+
+The defender tripped the opponent *carelessly* under Law 12.1. Since the challenge occurred outside the penalty area, the restart is a direct free kick.
+
+The contact was careless but not *reckless*, so no disciplinary action is warranted.
+
+Law 12.1 — A direct free kick is awarded if a player trips or attempts to trip an opponent.
+
+Verdict: **Direct free kick** to the attacking team. No card."
 
 Never apologize or explain that you need more information - just ask the questions directly.`
 
@@ -31,14 +43,10 @@ interface Message {
 
 export async function POST(req: Request) {
   try {
-    console.log("[v0] DecisionLab API called")
     const body = await req.json()
-    console.log("[v0] Request body:", JSON.stringify(body))
-    
-    const { messages, isInitial } = body
+    const { messages } = body
 
     if (!messages || !Array.isArray(messages)) {
-      console.error("[v0] Invalid messages format:", messages)
       return Response.json({ error: "Invalid request: messages must be an array" }, { status: 400 })
     }
 
@@ -50,27 +58,20 @@ export async function POST(req: Request) {
       })),
     ]
 
-    console.log("[v0] Calling generateText with", conversationMessages.length, "messages")
-
     const { text } = await generateText({
-      model: "groq/llama-3.3-70b-versatile",
+      model: getModel(),
       messages: conversationMessages,
       maxOutputTokens: 500,
     })
 
-    console.log("[v0] Generated text length:", text?.length || 0)
-
     if (!text || text.trim().length === 0) {
-      console.error("[v0] DecisionLab returned empty response")
       return Response.json({ error: "AI returned an empty response. Please try again." }, { status: 500 })
     }
 
     return Response.json({ response: text })
   } catch (error) {
-    console.error("[v0] Error in DecisionLab:", error)
-    console.error("[v0] Error details:", error instanceof Error ? error.message : String(error))
-    console.error("[v0] Error stack:", error instanceof Error ? error.stack : "No stack trace")
-    return Response.json({ 
+    console.error("[Decision Lab API Error]", error)
+    return Response.json({
       error: "Failed to analyze scenario",
       details: error instanceof Error ? error.message : String(error)
     }, { status: 500 })

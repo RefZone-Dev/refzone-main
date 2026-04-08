@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Bell, Send, CheckCircle, AlertCircle, Users, Smartphone } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { toast } from "sonner"
 
 export default function AdminNotificationsPage() {
   const [title, setTitle] = useState("")
@@ -27,15 +27,9 @@ export default function AdminNotificationsPage() {
   const [pushSuccess, setPushSuccess] = useState(false)
   const [pushSentCount, setPushSentCount] = useState(0)
   
-  const { toast } = useToast()
-
   const sendPushNotification = async () => {
     if (!pushTitle.trim() || !pushBody.trim()) {
-      toast({
-        title: "Error",
-        description: "Please provide both a title and body for the push notification",
-        variant: "destructive",
-      })
+      toast.error("Please provide both a title and body for the push notification")
       return
     }
 
@@ -62,10 +56,7 @@ export default function AdminNotificationsPage() {
 
       setPushSuccess(true)
       setPushSentCount(data.count || 0)
-      toast({
-        title: "Success!",
-        description: `Push notification sent to ${data.count} devices`,
-      })
+      toast.success(`Push notification sent to ${data.count} devices`)
 
       setTimeout(() => {
         setPushTitle("")
@@ -75,11 +66,7 @@ export default function AdminNotificationsPage() {
       }, 5000)
     } catch (error) {
       console.error("Error sending push notification:", error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to send push notification. Please try again.",
-        variant: "destructive",
-      })
+      toast.error(error instanceof Error ? error.message : "Failed to send push notification. Please try again.")
     } finally {
       setPushLoading(false)
     }
@@ -87,11 +74,7 @@ export default function AdminNotificationsPage() {
 
   const sendGlobalNotification = async () => {
     if (!title.trim() || !message.trim()) {
-      toast({
-        title: "Error",
-        description: "Please provide both a title and message",
-        variant: "destructive",
-      })
+      toast.error("Please provide both a title and message")
       return
     }
 
@@ -120,10 +103,7 @@ export default function AdminNotificationsPage() {
 
       setSuccess(true)
       setSentCount(data.count || 0)
-      toast({
-        title: "Success!",
-        description: `${isImportant ? "Important announcement" : "Notification"} sent to ${data.count} users`,
-      })
+      toast.success(`${isImportant ? "Important announcement" : "Notification"} sent to ${data.count} users`)
 
       setTimeout(() => {
         setTitle("")
@@ -135,11 +115,7 @@ export default function AdminNotificationsPage() {
       }, 5000)
     } catch (error) {
       console.error("Error sending notification:", error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to send notification. Please try again.",
-        variant: "destructive",
-      })
+      toast.error(error instanceof Error ? error.message : "Failed to send notification. Please try again.")
     } finally {
       setLoading(false)
     }

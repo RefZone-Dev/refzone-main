@@ -1,5 +1,7 @@
 import { generateText } from "ai"
 import { NextRequest, NextResponse } from 'next/server'
+import { parseAIJsonResponse } from "@/lib/parse-ai-json"
+import { getModel } from "@/lib/ai-model"
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,7 +12,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { text } = await generateText({
-      model: "groq/llama-3.3-70b-versatile",
+      model: getModel(),
       prompt: `You are an expert football/soccer referee analyzing a scenario answer to categorize it by law.
 
 Given the following referee scenario answer, suggest the most relevant law category and specific law section:
@@ -36,17 +38,11 @@ Be specific and accurate based on the Laws of the Game.`,
       maxOutputTokens: 200,
     })
 
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) {
-      return NextResponse.json({ error: 'Failed to parse tags' }, { status: 500 })
-    }
-
-    const tags = JSON.parse(jsonMatch[0])
+    const tags = parseAIJsonResponse(text)
     return NextResponse.json({ tags })
   } catch (error) {
-    console.error('[v0] Error in tag suggestion:', error)
-    return NextResponse.json({ 
-      error: error instanceof Error ? error.message : 'Internal server error' 
+    return NextResponse.json({
+      error: error instanceof Error ? error.message : 'Internal server error'
     }, { status: 500 })
   }
 }

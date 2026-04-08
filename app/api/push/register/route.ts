@@ -1,17 +1,14 @@
-import { createClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/lib/auth"
+import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-    
+    const userId = await requireAuth()
+
+    const supabase = createServiceClient()
+
     const { token, platform, deviceId } = await request.json()
     
     if (!token || !platform) {
@@ -33,7 +30,7 @@ export async function POST(request: NextRequest) {
       .from("push_tokens")
       .upsert(
         {
-          user_id: user.id,
+          user_id: userId,
           token,
           platform,
           device_id: deviceId || null,
@@ -71,14 +68,10 @@ export async function POST(request: NextRequest) {
 // Deactivate a push token (when user logs out or disables notifications)
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = await createClient()
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-    
+    const userId = await requireAuth()
+
+    const supabase = createServiceClient()
+
     const { token } = await request.json()
     
     if (!token) {
@@ -92,7 +85,7 @@ export async function DELETE(request: NextRequest) {
     const { error } = await supabase
       .from("push_tokens")
       .update({ is_active: false, updated_at: new Date().toISOString() })
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("token", token)
     
     if (error) {

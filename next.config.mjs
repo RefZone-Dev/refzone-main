@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: "standalone",
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -12,10 +13,6 @@ const nextConfig = {
         pathname: '/storage/**',
       },
     ],
-  },
-  // Force rebuild to clear stale cache
-  generateBuildId: async () => {
-    return `build-${Date.now()}`
   },
 }
 

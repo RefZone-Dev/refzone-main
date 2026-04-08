@@ -1,12 +1,14 @@
 import { generateText } from "ai"
 import { NextResponse } from "next/server"
+import { parseAIJsonResponse } from "@/lib/parse-ai-json"
+import { getModel } from "@/lib/ai-model"
 
 export async function POST(req: Request) {
   try {
     const { userAnswer, correctAnswer, questionContext } = await req.json()
 
     const { text } = await generateText({
-      model: "groq/llama-3.3-70b-versatile",
+      model: getModel(),
       prompt: `You are a football referee answer checker for RefZone. You must evaluate answers based on the IFAB Laws of the Game 2025/26.
 
 Return your answer as strict JSON only — no markdown, no explanations, no text before or after the JSON.
@@ -31,23 +33,20 @@ User Answer: ${userAnswer}`,
       maxOutputTokens: 100,
     })
 
-    // Parse the JSON response from the AI
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      const result = JSON.parse(jsonMatch[0])
+    try {
+      const result = parseAIJsonResponse(text) as any
       return NextResponse.json({
         isCorrect: result.isCorrect ?? false,
         confidence: result.confidence ?? 0,
       })
+    } catch {
+      // Fallback if JSON parsing fails
+      return NextResponse.json({
+        isCorrect: false,
+        confidence: 0,
+      })
     }
-
-    // Fallback if JSON parsing fails
-    return NextResponse.json({
-      isCorrect: false,
-      confidence: 0,
-    })
-  } catch (error) {
-    console.error("[v0] Error checking answer:", error)
+  } catch {
     return NextResponse.json({ error: "Failed to check answer" }, { status: 500 })
   }
 }

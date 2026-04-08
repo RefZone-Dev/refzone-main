@@ -2,17 +2,15 @@
 
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
+import { useAuth, useUser } from "@clerk/nextjs"
 import {
   LayoutDashboard,
   Settings,
-  User,
   LogOut,
   Shield,
   Moon,
   Sun,
-  MessageSquare,
   Users,
-  UserCircle,
   HelpCircle,
   Mail,
   Copy,
@@ -38,40 +36,31 @@ export function NavBar() {
   const pathname = usePathname()
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [isAdminUser, setIsAdminUser] = useState(false)
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
-  const [user, setUser] = useState<any>(null)
-  const [userLoading, setUserLoading] = useState(true)
+  const { isSignedIn, isLoaded, userId, signOut } = useAuth()
+
+  const { user: clerkUser } = useUser()
 
   useEffect(() => {
     setMounted(true)
-    const supabase = createClient()
-
-    // Use getSession for fast initial check (avoids network call)
-    // then getUser for verified auth in background
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user)
-        setUserLoading(false)
-        // Fetch admin status - handle case where column doesn't exist
-        supabase.from("profiles").select("*").eq("id", session.user.id).single().then(({ data: profile, error }) => {
-          if (!error && profile?.is_admin) setIsAdmin(true)
-        }).catch(() => {
-          // Silently fail if profiles table or is_admin column doesn't exist
-        })
-      } else {
-        setUserLoading(false)
+    if (clerkUser?.primaryEmailAddress?.emailAddress) {
+      const email = clerkUser.primaryEmailAddress.emailAddress
+      if (email === "henrytowen@googlemail.com" || email === "refzone.office@gmail.com") {
+        setIsAdminUser(true)
       }
-    })
-  }, [])
+    }
+  }, [clerkUser])
 
   const handleSignOut = async () => {
     setIsLoading(true)
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push("/auth/login")
+    await signOut()
+    router.push("/")
   }
+
+  const user = isSignedIn
+  const userLoading = !isLoaded
 
   const [supportOpen, setSupportOpen] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -120,13 +109,11 @@ export function NavBar() {
     { href: "/decision-lab", label: "Decision Lab", icon: Users },
   ]
 
-  const socialNavItems: { href: string; label: string; icon: any; tutorialId?: string }[] = []
-
-  const bottomNavItems = [
+  const bottomNavItems: { href: string; label: string; icon: any; tutorialId?: string }[] = [
     { href: "/settings", label: "Settings", icon: Settings, tutorialId: "settings-link" },
   ]
 
-  if (isAdmin) {
+  if (isAdminUser) {
     bottomNavItems.push({ href: "/admin", label: "Admin Panel", icon: Shield })
   }
 
@@ -150,21 +137,11 @@ export function NavBar() {
     )
   }
 
-  const NavLinks = ({ showSections = true }: { showSections?: boolean }) => (
+  const NavLinks = () => (
     <>
       {mainNavItems.map((item) => (
         <NavLink key={item.href} item={item} />
       ))}
-
-      {showSections && (
-        <div className="my-3 border-t pt-3">
-          <p className="px-3 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Social</p>
-          {socialNavItems.map((item) => (
-            <NavLink key={item.href} item={item} />
-          ))}
-        </div>
-      )}
-      {!showSections && socialNavItems.map((item) => <NavLink key={item.href} item={item} />)}
     </>
   )
 

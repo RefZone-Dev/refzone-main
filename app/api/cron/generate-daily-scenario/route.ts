@@ -1,6 +1,8 @@
 import { createServiceClient } from "@/lib/supabase/service"
 import { NextResponse } from "next/server"
 import { generateText } from "ai"
+import { parseAIJsonResponse } from "@/lib/parse-ai-json"
+import { getModel } from "@/lib/ai-model"
 
 export const dynamic = "force-dynamic"
 
@@ -17,7 +19,7 @@ export async function GET(request: Request) {
 
   try {
     const { text } = await generateText({
-      model: "groq/llama-3.3-70b-versatile",
+      model: getModel(),
       prompt: `Generate a realistic football/soccer refereeing scenario for training purposes based on the IFAB Laws of the Game 2025/26. The scenario should test decision-making skills and be based on actual Laws.
 
 IMPORTANT: All scenarios, decisions, and explanations MUST reference and comply with the official IFAB Laws of the Game 2025/26, including:
@@ -41,20 +43,7 @@ Return ONLY valid JSON (no markdown, no code blocks) in this exact format:
 Make the scenario realistic, educational, and strictly compliant with IFAB Laws of the Game 2025/26. All explanations must cite the specific Law(s) that apply.`,
     })
 
-    // Parse the AI response
-    let cleanedText = text.trim()
-    if (cleanedText.startsWith("```json")) cleanedText = cleanedText.slice(7)
-    if (cleanedText.startsWith("```")) cleanedText = cleanedText.slice(3)
-    if (cleanedText.endsWith("```")) cleanedText = cleanedText.slice(0, -3)
-    cleanedText = cleanedText.trim()
-
-    const jsonStartIndex = cleanedText.indexOf("{")
-    const jsonEndIndex = cleanedText.lastIndexOf("}")
-    if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
-      cleanedText = cleanedText.substring(jsonStartIndex, jsonEndIndex + 1)
-    }
-
-    const scenarioData = JSON.parse(cleanedText)
+    const scenarioData = parseAIJsonResponse(text) as any
 
     // Deactivate old scenarios (keep only last 7 days of scenarios active)
     const sevenDaysAgo = new Date()
@@ -79,7 +68,6 @@ Make the scenario realistic, educational, and strictly compliant with IFAB Laws 
       .single()
 
     if (error) {
-      console.error("Error inserting scenario:", error)
       return NextResponse.json({ error: "Failed to insert scenario" }, { status: 500 })
     }
 
@@ -87,8 +75,7 @@ Make the scenario realistic, educational, and strictly compliant with IFAB Laws 
       success: true,
       scenario: newScenario,
     })
-  } catch (error) {
-    console.error("Error generating daily scenario:", error)
+  } catch {
     return NextResponse.json({ error: "Failed to generate scenario" }, { status: 500 })
   }
 }

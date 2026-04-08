@@ -1,11 +1,11 @@
-import { createClient } from "@/lib/supabase/server"
+import { createServiceClient } from "@/lib/supabase/service"
 import type { FeatureKey, FeatureClosure } from "@/lib/feature-closures-types"
 
 export type { FeatureKey, FeatureClosure } from "@/lib/feature-closures-types"
 export { FEATURE_PATHS, FEATURE_NAMES } from "@/lib/feature-closures-types"
 
 export async function checkFeatureClosure(featureKey: FeatureKey): Promise<FeatureClosure | null> {
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   
   const { data, error } = await supabase
     .from('feature_closures')

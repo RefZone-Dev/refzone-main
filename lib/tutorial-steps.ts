@@ -61,7 +61,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     step: 4,
     title: "Match Report Builder",
     description:
-      "Create professional match reports with AI assistance. Perfect for documenting send-offs and incidents!",
+      "Create professional match reports with guided assistance. Perfect for documenting send-offs and incidents!",
     page: "/dashboard",
     targetSelector: "[data-tutorial='match-reports']",
     scrollTo: true,
@@ -69,9 +69,9 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: "decision-lab",
     step: 5,
-    title: "AI DecisionLab",
+    title: "Decision Lab",
     description:
-      "Get AI-powered analysis of complex match situations. Describe any scenario and get expert guidance based on the Laws of the Game!",
+      "Get detailed analysis of complex match situations. Describe any scenario and get expert guidance based on the Laws of the Game!",
     page: "/dashboard",
     targetSelector: "[data-tutorial='decision-lab']",
     scrollTo: true,

@@ -47,8 +47,7 @@ export function BulkActionsToolbar({ selectedIds, onActionComplete, onClearSelec
         const error = await res.json()
         toast.error(error.message || 'Bulk action failed')
       }
-    } catch (error) {
-      console.error('Bulk action failed:', error)
+    } catch {
       toast.error('Bulk action failed')
     } finally {
       setLoading(false)

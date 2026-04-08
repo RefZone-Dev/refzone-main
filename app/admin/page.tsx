@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useAuth, useUser } from "@clerk/nextjs"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { Shield, Users, Target, BookOpen, MessageSquare, TrendingUp, Settings, Bell, AlertCircle } from "lucide-react"
@@ -19,6 +20,8 @@ interface Stats {
 }
 
 export default function AdminDashboard() {
+  const { userId } = useAuth()
+  const { user: clerkUser } = useUser()
   const [isAdmin, setIsAdmin] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [stats, setStats] = useState<Stats>({
@@ -34,23 +37,20 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const checkAdminAndFetchStats = async () => {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
+      if (!userId) {
         router.push("/auth/login")
         return
       }
 
-      // Check if user is admin
-      const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single()
-
-      if (!profile?.is_admin) {
+      // Check if user is admin by email
+      const email = clerkUser?.primaryEmailAddress?.emailAddress
+      const adminEmails = ["henrytowen@googlemail.com", "refzone.office@gmail.com"]
+      if (!email || !adminEmails.includes(email)) {
         router.push("/dashboard")
         return
       }
+
+      const supabase = createClient()
 
       setIsAdmin(true)
 
@@ -166,22 +166,6 @@ export default function AdminDashboard() {
 
       {/* Quick Actions */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <Link href="/admin/users">
-          <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="p-3 rounded-lg bg-primary/10">
-                  <Users className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <CardTitle>User Management</CardTitle>
-                  <CardDescription className="mt-1">View and manage users, assign admin roles</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-          </Card>
-        </Link>
-
         <Link href="/admin/content">
           <Card className="hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-primary">
             <CardHeader>

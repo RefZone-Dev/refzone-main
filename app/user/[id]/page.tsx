@@ -1,10 +1,11 @@
 import { cn } from "@/lib/utils"
-import { createClient } from "@/lib/supabase/server"
+import { requireAuth } from "@/lib/auth"
+import { createServiceClient } from "@/lib/supabase/service"
 import { redirect, notFound } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { MessageSquare, Reply, Star, Trophy, Calendar } from "lucide-react"
+import { MessageSquare, Reply, Flame, Calendar } from "lucide-react"
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 import { VerifiedBadge } from "@/components/verified-badge"
@@ -13,7 +14,7 @@ import { AgeRestrictionBanner } from "@/components/age-restriction-banner"
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
+  const supabase = createServiceClient()
   const { data: profile } = await supabase.from("profiles").select("display_name").eq("id", id).single()
 
   return {
@@ -24,22 +25,25 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function UserProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createClient()
-  const {
-    data: { user: currentUser },
-  } = await supabase.auth.getUser()
+  const supabase = createServiceClient()
+  let currentUserId: string | null = null
+  try {
+    currentUserId = await requireAuth()
+  } catch {
+    // Not logged in - that's ok for public profiles
+  }
 
   // Redirect to own profile if viewing self
-  if (currentUser && currentUser.id === id) {
+  if (currentUserId && currentUserId === id) {
     redirect("/profile")
   }
 
   // Check age restriction
-  if (currentUser) {
+  if (currentUserId) {
     const { data: currentProfile } = await supabase
       .from("profiles")
       .select("date_of_birth")
-      .eq("id", currentUser.id)
+      .eq("id", currentUserId)
       .single()
 
     if (isUnder16(currentProfile?.date_of_birth)) {
@@ -127,12 +131,6 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
                   {profile?.display_name || "User"}
                 </h1>
                 <VerifiedBadge isVerified={profile?.is_verified || false} className="h-5 w-5" />
-                {(customization as any)?.shop_items && (
-                  <Badge variant="secondary" className="gap-1">
-                    <Star className="h-3 w-3 text-amber-500" />
-                    {(customization as any).shop_items.name}
-                  </Badge>
-                )}
               </div>
               <div
                 className={cn(
@@ -141,8 +139,8 @@ export default async function UserProfilePage({ params }: { params: Promise<{ id
                 )}
               >
                 <span className="flex items-center gap-1">
-                  <Trophy className="h-4 w-4 text-amber-500" />
-                  {profile?.total_points || 0} points
+                  <Flame className="h-4 w-4 text-orange-500" />
+                  {profile?.current_streak || 0} day streak
                 </span>
                 <span className="flex items-center gap-1">
                   <MessageSquare className="h-4 w-4 text-blue-500" />

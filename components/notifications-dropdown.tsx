@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { Bell, UserPlus, MessageSquare, Trophy, Check, X, ExternalLink } from "lucide-react"
+import { useAuth } from "@clerk/nextjs"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { formatDistanceToNow } from "date-fns"
@@ -34,6 +35,7 @@ interface Notification {
 }
 
 export function NotificationsDropdown() {
+  const { userId } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [loading, setLoading] = useState(true)
   const [tableExists, setTableExists] = useState(true)
@@ -42,44 +44,46 @@ export function NotificationsDropdown() {
 
   useEffect(() => {
     loadNotifications()
+  }, [])
 
-    if (!tableExists) return
+  // Separate effect for realtime subscription
+  useEffect(() => {
+    if (!tableExists || !userId) return
 
-    const supabase = createClient()
-    const channel = supabase
-      .channel("notifications")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (payload) => {
-        setNotifications((prev) => [payload.new as Notification, ...prev])
-      })
-      .subscribe()
+    let channel: any
+    try {
+      const supabase = createClient()
+      channel = supabase
+        .channel("notifications")
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, (payload) => {
+          setNotifications((prev) => [payload.new as Notification, ...prev])
+        })
+        .subscribe()
+    } catch {
+      // Realtime not available, notifications still load via polling
+    }
 
     return () => {
-      supabase.removeChannel(channel)
+      if (channel) {
+        const supabase = createClient()
+        supabase.removeChannel(channel)
+      }
     }
-  }, [tableExists])
+  }, [tableExists, userId])
 
   const loadNotifications = async () => {
     try {
-      const supabase = createClient()
-      let user = null
-      try {
-        const { data } = await supabase.auth.getSession()
-        user = data?.session?.user
-      } catch (authError) {
-        console.warn("[v0] Auth fetch failed, skipping notifications load")
+      if (!userId) {
         setLoading(false)
         return
       }
 
-      if (!user) {
-        setLoading(false)
-        return
-      }
+      const supabase = createClient()
 
       const { data: notificationsData, error } = await supabase
         .from("notifications")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(20)
 
@@ -125,29 +129,21 @@ export function NotificationsDropdown() {
       await supabase.from("notifications").update({ is_read: true }).eq("id", id)
 
       setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, is_read: true } : n)))
-    } catch (error) {
-      console.error("[v0] Error marking notification as read:", error)
+    } catch {
+      // Silently handle
     }
   }
 
   const markAllAsRead = async () => {
     try {
+      if (!userId) return
+
       const supabase = createClient()
-      let user = null
-      try {
-        const { data } = await supabase.auth.getSession()
-        user = data?.session?.user
-      } catch (authError) {
-        return
-      }
-
-      if (!user) return
-
-      await supabase.from("notifications").update({ is_read: true }).eq("user_id", user.id).eq("is_read", false)
+      await supabase.from("notifications").update({ is_read: true }).eq("user_id", userId).eq("is_read", false)
 
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
-    } catch (error) {
-      console.error("[v0] Error marking all as read:", error)
+    } catch {
+      // Silently handle
     }
   }
 
@@ -167,8 +163,8 @@ export function NotificationsDropdown() {
 
       await markAsRead(notificationId)
       await loadNotifications()
-    } catch (error) {
-      console.error("[v0] Error responding to friend request:", error)
+    } catch {
+      // Silently handle
     } finally {
       setRespondingTo(null)
     }

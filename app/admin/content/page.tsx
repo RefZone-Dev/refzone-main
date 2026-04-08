@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth, useUser } from "@clerk/nextjs"
 import { createClient } from "@/lib/supabase/client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -22,6 +23,7 @@ import {
 import { Eye, EyeOff, Pencil, Plus, Trash2, ArrowLeft, Target, FileQuestion, Sparkles, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { VideoScenarioUpload } from "./video-scenarios"
+import { getDifficultyColor } from "@/lib/shared-utils"
 
 interface Scenario {
   id: string
@@ -60,6 +62,8 @@ interface QuizQuestion {
 }
 
 export default function ContentManagement() {
+  const { userId } = useAuth()
+  const { user: clerkUser } = useUser()
   const [scenarios, setScenarios] = useState<Scenario[]>([])
   const [quizzes, setQuizzes] = useState<Quiz[]>([])
   const [quizQuestions, setQuizQuestions] = useState<QuizQuestion[]>([])
@@ -78,7 +82,7 @@ export default function ContentManagement() {
   })
   const [quizDialog, setQuizDialog] = useState<{ open: boolean; editing: Quiz | null }>({ open: false, editing: null })
   const [aiQuizDialog, setAiQuizDialog] = useState(false)
-  const [aiQuizForm, setAiQuizForm] = useState({ quantity: 5, category: "" })
+  const [aiQuizForm, setAiQuizForm] = useState({ quantity: 5, category: "", length: "random" as "short" | "standard" | "extended" | "random" })
 
   // Form states - Scenarios are now video-only and created via VideoScenarioUpload component
 
@@ -110,22 +114,19 @@ export default function ContentManagement() {
 
   useEffect(() => {
     const fetchContent = async () => {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
+      if (!userId) {
         router.push("/auth/login")
         return
       }
 
-      const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single()
-
-      if (!profile?.is_admin) {
+      const email = clerkUser?.primaryEmailAddress?.emailAddress
+      const adminEmails = ["henrytowen@googlemail.com", "refzone.office@gmail.com"]
+      if (!email || !adminEmails.includes(email)) {
         router.push("/dashboard")
         return
       }
+
+      const supabase = createClient()
 
       const [scenariosRes, quizzesRes] = await Promise.all([
         supabase.from("scenarios").select("*").order("created_at", { ascending: false }),
@@ -139,7 +140,7 @@ export default function ContentManagement() {
     }
 
     fetchContent()
-  }, [router])
+  }, [router, clerkUser])
 
   // Scenarios are now video-only and managed through VideoScenarioUpload component
   const refreshScenarios = async () => {
@@ -156,12 +157,7 @@ export default function ContentManagement() {
       message:
         "Are you sure you want to delete this scenario? This will also delete all user responses. This action cannot be undone.",
       onConfirm: async () => {
-        const supabase = createClient()
-        const {
-          data: { user },
-        } = await supabase.auth.getUser()
-
-        if (!user) return
+        if (!userId) return
 
         try {
           const response = await fetch(`/api/admin/delete-scenario?id=${id}`, {
@@ -173,7 +169,7 @@ export default function ContentManagement() {
           if (!response.ok) {
             setModal({
               isOpen: true,
-              type: "alert" as any,
+              type: "error",
               title: "Delete Failed",
               message: result.error || "Failed to delete scenario",
               onConfirm: () => setModal({ ...modal, isOpen: false }),
@@ -183,11 +179,10 @@ export default function ContentManagement() {
 
           setScenarios(scenarios.filter((s) => s.id !== id))
           setModal({ ...modal, isOpen: false })
-        } catch (error) {
-          console.error("[v0] Delete scenario error:", error)
+        } catch {
           setModal({
             isOpen: true,
-            type: "alert" as any,
+            type: "error",
             title: "Delete Failed",
             message: "An unexpected error occurred",
             onConfirm: () => setModal({ ...modal, isOpen: false }),
@@ -249,12 +244,7 @@ export default function ContentManagement() {
       message:
         "Are you sure you want to delete this quiz? This will also delete all questions and user attempts. This action cannot be undone.",
       onConfirm: async () => {
-        const supabase = createClient()
-        const {
-          data: { user },
-        } = await supabase.auth.getUser()
-
-        if (!user) return
+        if (!userId) return
 
         try {
           const response = await fetch(`/api/admin/delete-quiz?id=${id}`, {
@@ -266,7 +256,7 @@ export default function ContentManagement() {
           if (!response.ok) {
             setModal({
               isOpen: true,
-              type: "alert" as any,
+              type: "error",
               title: "Delete Failed",
               message: result.error || "Failed to delete quiz",
               onConfirm: () => setModal({ ...modal, isOpen: false }),
@@ -276,11 +266,10 @@ export default function ContentManagement() {
 
           setQuizzes(quizzes.filter((q) => q.id !== id))
           setModal({ ...modal, isOpen: false })
-        } catch (error) {
-          console.error("[v0] Delete quiz error:", error)
+        } catch {
           setModal({
             isOpen: true,
-            type: "alert" as any,
+            type: "error",
             title: "Delete Failed",
             message: "An unexpected error occurred",
             onConfirm: () => setModal({ ...modal, isOpen: false }),
@@ -389,6 +378,7 @@ export default function ContentManagement() {
         body: JSON.stringify({
           quantity: aiQuizForm.quantity,
           category: aiQuizForm.category,
+          length: aiQuizForm.length,
         }),
       })
 
@@ -407,10 +397,10 @@ export default function ContentManagement() {
       if (data) setQuizzes(data)
 
       setAiQuizDialog(false)
-      setAiQuizForm({ quantity: 5, category: "" })
+      setAiQuizForm({ quantity: 5, category: "", length: "random" })
       setModal({
         isOpen: true,
-        type: "alert" as any,
+        type: "success",
         title: "Success",
         message: `Successfully generated ${result.quizzesCreated} quiz(zes) with ${result.questionsCreated} total questions!`,
         onConfirm: () => setModal({ ...modal, isOpen: false }),
@@ -418,7 +408,7 @@ export default function ContentManagement() {
     } catch (error: any) {
       setModal({
         isOpen: true,
-        type: "alert" as any,
+        type: "error",
         title: "Generation Failed",
         message: error.message || "Failed to generate quiz",
         onConfirm: () => setModal({ ...modal, isOpen: false }),
@@ -440,19 +430,6 @@ export default function ContentManagement() {
     setQuizzes(quizzes.map((q) => (q.id === id ? { ...q, is_active: !currentActive } : q)))
   }
 
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "easy":
-        return "bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30"
-      case "medium":
-        return "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/30"
-      case "hard":
-        return "bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30"
-      default:
-        return "bg-muted text-muted-foreground"
-    }
-  }
-
   return (
     <div className="p-6 lg:p-8 space-y-6">
       {/* Modal for alerts and confirmations */}
@@ -472,7 +449,7 @@ export default function ContentManagement() {
               <Button onClick={modal.onConfirm}>Confirm</Button>
             </DialogFooter>
           )}
-          {modal.type === "alert" && (
+          {(modal.type === "error" || modal.type === "success" || modal.type === "info" || modal.type === "warning") && (
             <DialogFooter>
               <Button onClick={() => setModal({ ...modal, isOpen: false })}>Close</Button>
             </DialogFooter>
@@ -591,6 +568,30 @@ export default function ContentManagement() {
                 min="1"
                 max="20"
               />
+            </div>
+            <div className="space-y-2">
+              <Label>Quiz Length</Label>
+              <div className="grid grid-cols-4 gap-2">
+                {[
+                  { value: "random", label: "Random" },
+                  { value: "short", label: "Short (5)" },
+                  { value: "standard", label: "Mid (10)" },
+                  { value: "extended", label: "Long (15)" },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setAiQuizForm({ ...aiQuizForm, length: opt.value as any })}
+                    className={`rounded-lg border px-3 py-2 text-xs font-medium transition-colors ${
+                      aiQuizForm.length === opt.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-background text-muted-foreground hover:bg-accent"
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="quiz-category">Law Category (Optional)</Label>

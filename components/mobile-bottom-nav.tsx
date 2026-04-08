@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { createClient } from "@/lib/supabase/client"
+import { useAuth, useUser } from "@clerk/nextjs"
 import { Home, Settings, LogOut, Moon, Sun, Users, Shield, HelpCircle, Mail, Copy, Check, FlaskConical } from "lucide-react"
 import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
@@ -44,30 +45,23 @@ export function MobileBottomNav() {
     }
   }, [openDropdown, tutorialActive])
 
+  const { userId, signOut } = useAuth()
+  const { user } = useUser()
+
   useEffect(() => {
     setMounted(true)
-    const checkAdmin = async () => {
-      try {
-        const supabase = createClient()
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session?.user) {
-          const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", session.user.id).single()
-          if (profile?.is_admin) {
-            setIsAdmin(true)
-          }
-        }
-      } catch (error) {
-        // Silently handle errors
+    if (user?.primaryEmailAddress?.emailAddress) {
+      const email = user.primaryEmailAddress.emailAddress
+      if (email === "henrytowen@googlemail.com" || email === "refzone.office@gmail.com") {
+        setIsAdmin(true)
       }
     }
-    checkAdmin()
-  }, [])
+  }, [user])
 
   const handleSignOut = async () => {
     setIsLoading(true)
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push("/auth/login")
+    await signOut()
+    router.push("/")
   }
 
   const toggleTheme = () => {
